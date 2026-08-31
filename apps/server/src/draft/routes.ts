@@ -2,7 +2,8 @@ import { Router } from "express";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/client.js";
-import { drafts, nflPlayers, rosterSlots, teams } from "../db/schema.js";
+import { drafts, nflPlayers, rosterSlots, seasons, teams } from "../db/schema.js";
+import { getRatingsForWeek } from "../db/ratingsRepo.js";
 import type { AuthedRequest } from "../middleware/requireAuth.js";
 import { requireAuth } from "../middleware/requireAuth.js";
 import { statsProvider } from "../stats-provider/index.js";
@@ -17,14 +18,22 @@ const soloDraftSchema = z.object({
   botCount: z.number().int().min(1).max(11).default(9),
 });
 
-async function currentDraftablePlayers(): Promise<DraftablePlayer[]> {
+async function currentDraftablePlayers(seasonId: string): Promise<DraftablePlayer[]> {
   const players = await db.query.nflPlayers.findMany();
-  const season = new Date().getFullYear();
-  const weeklyStats = await statsProvider.getWeeklyStats(season, 1);
-  const statsById = new Map(weeklyStats.map((s) => [s.playerId, s]));
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.id, seasonId) });
+  const year = season?.year ?? new Date().getFullYear();
+  const week = season?.currentWeek ?? 1;
+
+  const persisted = await getRatingsForWeek(year, week);
+  const statsById =
+    persisted.size > 0
+      ? null
+      : new Map((await statsProvider.getWeeklyStats(year, week)).map((s) => [s.playerId, s]));
+
   return players.map((p) => {
-    const stats = statsById.get(p.id);
-    const overall = stats ? computeRatingFromStats(p.position, stats).overall : 50;
+    const persistedRating = persisted.get(p.id);
+    const stats = statsById?.get(p.id);
+    const overall = persistedRating?.overall ?? (stats ? computeRatingFromStats(p.position, stats).overall : 50);
     return { id: p.id, position: p.position, overall };
   });
 }
@@ -51,7 +60,7 @@ draftRouter.post("/solo", requireAuth, async (req: AuthedRequest, res) => {
     botTeamIds.push(bot.id);
   }
 
-  const availablePlayers = await currentDraftablePlayers();
+  const availablePlayers = await currentDraftablePlayers(seasonId);
   const { picksByTeam } = runSoloDraft([teamId, ...botTeamIds], availablePlayers);
 
   for (const [participantTeamId, assignments] of picksByTeam) {

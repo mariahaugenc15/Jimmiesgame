@@ -74,13 +74,43 @@ The rating engine and gameplay engine are pure, dependency-free function
 sets — see `apps/server/src/rating-engine` and `apps/server/src/gameplay/engine.ts`
 — covered by unit tests before anything touches the database or the network.
 
-## Swappable real-stats provider
+## Real stats, weekly ratings, and the sync job
 
-`apps/server/src/stats-provider` defines a `StatsProvider` interface with a
-deterministic `MockStatsProvider` for local development (curated real
-player list, seeded-random weekly stat lines). Point `STATS_PROVIDER` at a
-real implementation (SportsDataIO, Sleeper, nflverse) later without touching
-the rating engine or gameplay code.
+`apps/server/src/stats-provider` defines a `StatsProvider` interface with two
+implementations, selected via `STATS_PROVIDER`:
+
+- `mock` (default) — deterministic seeded-random weekly stat lines, no
+  network. Safe fallback for local dev or any environment without outbound
+  internet access.
+- `sleeper` — real player data and weekly stats from Sleeper's free, keyless
+  public API (`api.sleeper.app`). **The QB/RB/WR/TE field mapping matches
+  Sleeper's long-standing schema with high confidence; the kicker and team
+  defense field names in `sleeperProvider.ts` were written from best
+  available knowledge but could not be verified against a live response
+  while building this** (this dev sandbox's network egress policy blocks
+  `api.sleeper.app`). Before relying on K/DEF ratings in production, log one
+  raw `/stats/nfl/regular/{season}/{week}` response and confirm those keys.
+
+`apps/server/src/rating-engine/sync.ts` (`syncWeeklyRatings`) is the one
+place real stats become stored ratings: it upserts the provider's player
+list into `nfl_players`, pulls one week's stat lines into `weekly_stats`,
+computes 0-99 ratings via the rating engine, and upserts those into
+`player_ratings`. `apps/server/src/jobs/weeklyRatingSync.ts` runs that job
+automatically:
+
+- once at server startup (so a fresh boot has real ratings immediately,
+  not just after the first scheduled run),
+- every Tuesday morning via `node-cron` (after Monday Night Football has
+  finalized stats), advancing `season.currentWeek` to whatever the provider
+  reports as the real current NFL week (Sleeper's `/v1/state/nfl`) when
+  that's available,
+- or on demand via `POST /api/admin/sync-ratings`, for testing without
+  waiting for Tuesday.
+
+`GET /api/players`, the solo-draft roster fill, and live-match team
+profiles all read persisted `player_ratings` for the season's current week
+first, falling back to computing on the fly only for a week the sync job
+hasn't run for yet (e.g. the very first request after a fresh migration).
 
 ## Known simplifications (v1)
 
@@ -96,3 +126,6 @@ the rating engine or gameplay code.
 - The live multiplayer draft room (many humans in one snake draft) is not
   built yet — solo mode (best-player-available vs. bots) is complete and is
   the fastest path to a playable team today.
+- The app assumes one active season at a time (the most recently created
+  row in `seasons`); multi-season support would need that threaded through
+  explicitly instead of always picking "the latest."

@@ -86,9 +86,12 @@ function statsForPlayer(player: Omit<NFLPlayer, "id"> & { id: string }, season: 
 }
 
 export class MockStatsProvider implements StatsProvider {
-  private players: NFLPlayer[] = SEED_PLAYERS.map((p, i) => ({
+  private players: NFLPlayer[] = SEED_PLAYERS.map((p) => ({
     ...p,
-    id: `seed-${i}-${p.externalId}`,
+    // Derived from externalId alone (not array position) so ids stay stable
+    // across edits to SEED_PLAYERS — an index-based id silently orphans
+    // already-persisted rows the moment the list is reordered or resized.
+    id: `seed-${p.externalId}`,
   }));
 
   async listActivePlayers(): Promise<NFLPlayer[]> {

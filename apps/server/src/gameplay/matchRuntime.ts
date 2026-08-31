@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@lockedin/shared";
 import { db } from "../db/client.js";
-import { nflPlayers, rosterSlots } from "../db/schema.js";
+import { rosterSlots, seasons, teams } from "../db/schema.js";
+import { getRatingsForWeek } from "../db/ratingsRepo.js";
 import { computeRatingFromStats } from "../rating-engine/index.js";
 import { statsProvider } from "../stats-provider/index.js";
 import { applyPlayToGame, createInitialGameState, isGameOver, resolvePlay, startFirstDrive } from "./engine.js";
@@ -27,14 +28,21 @@ async function loadTeamProfile(teamId: string): Promise<{ offense: OffenseProfil
   const slots = await db.query.rosterSlots.findMany({ where: eq(rosterSlots.teamId, teamId) });
   const players = await db.query.nflPlayers.findMany();
   const playerById = new Map(players.map((p) => [p.id, p]));
-  const season = new Date().getFullYear();
-  const weeklyStats = await statsProvider.getWeeklyStats(season, 1);
-  const statsById = new Map(weeklyStats.map((s) => [s.playerId, s]));
+
+  const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
+  const season = team ? await db.query.seasons.findFirst({ where: eq(seasons.id, team.seasonId) }) : undefined;
+  const year = season?.year ?? new Date().getFullYear();
+  const week = season?.currentWeek ?? 1;
+
+  const persisted = await getRatingsForWeek(year, week);
+  const statsById =
+    persisted.size > 0 ? null : new Map((await statsProvider.getWeeklyStats(year, week)).map((s) => [s.playerId, s]));
 
   const rostered: RosteredPlayer[] = slots.map((slot) => {
     const player = playerById.get(slot.nflPlayerId);
-    const stats = statsById.get(slot.nflPlayerId);
-    const rating = player && stats ? computeRatingFromStats(player.position, stats) : null;
+    const persistedRating = persisted.get(slot.nflPlayerId);
+    const stats = statsById?.get(slot.nflPlayerId);
+    const rating = persistedRating ?? (player && stats ? computeRatingFromStats(player.position, stats) : null);
     return {
       nflPlayerId: slot.nflPlayerId,
       position: player?.position ?? "WR",

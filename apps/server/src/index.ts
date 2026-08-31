@@ -11,7 +11,9 @@ import { playersRouter } from "./routes/players.js";
 import { matchesRouter } from "./routes/matches.js";
 import { matchmakingRouter } from "./routes/matchmaking.js";
 import { leaguesRouter } from "./routes/leagues.js";
+import { adminRouter } from "./routes/admin.js";
 import { registerSocketHandlers } from "./realtime/socket.js";
+import { runWeeklySync, scheduleWeeklyRatingSync } from "./jobs/weeklyRatingSync.js";
 
 const app = express();
 app.use(cors({ origin: env.corsOrigin }));
@@ -27,6 +29,7 @@ app.use("/api/drafts", draftRouter);
 app.use("/api/matches", matchesRouter);
 app.use("/api/matchmaking", matchmakingRouter);
 app.use("/api/leagues", leaguesRouter);
+app.use("/api/admin", adminRouter);
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
@@ -40,3 +43,8 @@ registerSocketHandlers(io);
 httpServer.listen(env.port, () => {
   console.log(`Server listening on http://localhost:${env.port}`);
 });
+
+// Catch-up sync on boot, so a fresh deploy has real ratings immediately
+// instead of waiting for the next scheduled Tuesday run.
+runWeeklySync().catch((err) => console.error("[weekly-sync] startup run failed:", err));
+scheduleWeeklyRatingSync();
