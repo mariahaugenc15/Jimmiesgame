@@ -20,5 +20,11 @@ export const env = {
   jwtSecret: required("JWT_SECRET", "dev-secret-change-me"),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "30d",
   statsProvider: process.env.STATS_PROVIDER ?? "mock",
-  corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+  // The deployed frontend's real address is the fallback (not localhost) so
+  // production CORS keeps working even if the CORS_ORIGIN var set in the
+  // hosting dashboard doesn't reach the running process for some reason.
+  // Uses || rather than ?? so a var saved as an empty string also falls
+  // back, instead of silently locking out every origin (see api.ts on the
+  // frontend for the same bug, which this mirrors).
+  corsOrigin: process.env.CORS_ORIGIN || "https://jimmiesgame-web.vercel.app",
 };
