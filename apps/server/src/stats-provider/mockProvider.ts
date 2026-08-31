@@ -1,4 +1,4 @@
-import type { NFLPlayer, WeeklyStatLine } from "@jimmiesgame/shared";
+import type { NFLPlayer, WeeklyStatLine } from "@lockedin/shared";
 import { SEED_PLAYERS } from "./seedPlayers.js";
 import type { StatsProvider } from "./types.js";
 

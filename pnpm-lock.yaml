@@ -14,7 +14,7 @@ importers:
 
   apps/server:
     dependencies:
-      '@jimmiesgame/shared':
+      '@lockedin/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       bcryptjs:
@@ -78,7 +78,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@jimmiesgame/shared':
+      '@lockedin/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       react:

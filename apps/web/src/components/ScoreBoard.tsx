@@ -1,4 +1,4 @@
-import type { ClockState } from "@jimmiesgame/shared";
+import type { ClockState } from "@lockedin/shared";
 
 interface ScoreBoardProps {
   homeName: string;

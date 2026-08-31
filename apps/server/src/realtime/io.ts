@@ -1,5 +1,5 @@
 import type { Server } from "socket.io";
-import type { GameState } from "@jimmiesgame/shared";
+import type { GameState } from "@lockedin/shared";
 
 let ioInstance: Server | null = null;
 

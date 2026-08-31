@@ -1,4 +1,4 @@
-import type { DownState, OffensivePlay, PlayResult } from "@jimmiesgame/shared";
+import type { DownState, OffensivePlay, PlayResult } from "@lockedin/shared";
 
 interface FieldViewProps {
   down: DownState | null;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@jimmiesgame/shared";
+import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@lockedin/shared";
 import { connectSocket, disconnectSocket } from "../lib/socket";
 import { ScoreBoard } from "../components/ScoreBoard";
 import { FieldView } from "../components/FieldView";

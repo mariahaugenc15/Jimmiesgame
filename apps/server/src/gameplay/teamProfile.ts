@@ -1,4 +1,4 @@
-import type { PlayerRating, Position } from "@jimmiesgame/shared";
+import type { PlayerRating, Position } from "@lockedin/shared";
 import type { DefenseProfile, OffenseProfile } from "./engine.js";
 
 export interface RosteredPlayer {

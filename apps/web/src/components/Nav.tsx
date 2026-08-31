@@ -9,7 +9,7 @@ export function Nav() {
   return (
     <nav className="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-4 py-3">
       <div className="flex items-center gap-2">
-        <span className="text-lg font-bold text-emerald-400">Jimmies</span>
+        <span className="text-lg font-bold text-emerald-400">Locked In</span>
         {user && (
           <div className="ml-4 hidden gap-1 sm:flex">
             <NavLink to="/" end className={linkClass}>

@@ -1,4 +1,4 @@
-import type { PlayerRating, Position, WeeklyStatLine } from "@jimmiesgame/shared";
+import type { PlayerRating, Position, WeeklyStatLine } from "@lockedin/shared";
 
 const MIN_RATING = 40;
 const MAX_RATING = 99;

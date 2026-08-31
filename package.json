@@ -1,15 +1,15 @@
 {
-  "name": "jimmiesgame",
+  "name": "locked-in",
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev:web": "pnpm --filter @jimmiesgame/web dev",
-    "dev:server": "pnpm --filter @jimmiesgame/server dev",
+    "dev:web": "pnpm --filter @lockedin/web dev",
+    "dev:server": "pnpm --filter @lockedin/server dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint",
-    "db:migrate": "pnpm --filter @jimmiesgame/server db:migrate",
-    "db:seed": "pnpm --filter @jimmiesgame/server db:seed"
+    "db:migrate": "pnpm --filter @lockedin/server db:migrate",
+    "db:seed": "pnpm --filter @lockedin/server db:seed"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TOTAL_ROSTER_SIZE } from "@jimmiesgame/shared";
+import { TOTAL_ROSTER_SIZE } from "@lockedin/shared";
 import {
   autoFillRoster,
   findOpenSlotForPlayer,

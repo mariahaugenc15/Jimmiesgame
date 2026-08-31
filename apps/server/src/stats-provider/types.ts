@@ -1,4 +1,4 @@
-import type { NFLPlayer, WeeklyStatLine } from "@jimmiesgame/shared";
+import type { NFLPlayer, WeeklyStatLine } from "@lockedin/shared";
 
 /**
  * Swappable interface for pulling real NFL player data and weekly stats.

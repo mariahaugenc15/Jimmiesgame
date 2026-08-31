@@ -1,8 +1,11 @@
-# Jimmies Game
+# Locked In
 
 Fantasy football head-to-head: draft a season-long roster of real active NFL
 players, get weekly 0-99 in-game ratings computed from their real stats, then
 play abstract head-to-head matches against anyone in the world.
+
+The name is the mechanic: you draft your roster once, lock it in, and live
+with that decision for the whole season.
 
 Gameplay is deliberately abstract — formation diagrams, directional arrows,
 stat-weighted probability bars — not a simulation-style Madden clone. See
@@ -64,7 +67,7 @@ tab bar under `sm`).
 ## Tests
 
 ```bash
-pnpm --filter @jimmiesgame/server test   # rating engine, gameplay engine, draft logic
+pnpm --filter @lockedin/server test   # rating engine, gameplay engine, draft logic
 ```
 
 The rating engine and gameplay engine are pure, dependency-free function

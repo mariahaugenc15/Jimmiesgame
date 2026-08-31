@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@jimmiesgame/shared";
+import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@lockedin/shared";
 import { db } from "../db/client.js";
 import { nflPlayers, rosterSlots } from "../db/schema.js";
 import { computeRatingFromStats } from "../rating-engine/index.js";

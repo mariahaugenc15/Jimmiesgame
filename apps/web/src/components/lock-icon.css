@@ -1,0 +1,36 @@
+.lock-body {
+  fill: #1e293b;
+  stroke: #475569;
+  stroke-width: 1.5;
+  transition: fill 260ms ease, stroke 260ms ease;
+}
+
+.lock-keyhole {
+  fill: #0f172a;
+}
+
+.lock-shackle {
+  stroke: #94a3b8;
+  transform-box: view-box;
+  transform-origin: 10px 17px;
+  transform: rotate(-34deg) translateY(-1px);
+  transition:
+    transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    stroke 260ms ease;
+}
+
+.lock-shackle[data-locked="true"] {
+  stroke: #22c55e;
+  transform: rotate(0deg) translateY(0);
+}
+
+.lock-body[data-locked="true"] {
+  stroke: #22c55e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lock-shackle,
+  .lock-body {
+    transition-duration: 1ms;
+  }
+}

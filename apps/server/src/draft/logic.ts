@@ -1,4 +1,4 @@
-import { DRAFT_ROUNDS, ROSTER_RULES, type Position, type RosterSlotType } from "@jimmiesgame/shared";
+import { DRAFT_ROUNDS, ROSTER_RULES, type Position, type RosterSlotType } from "@lockedin/shared";
 
 export interface DraftPickSlot {
   round: number;

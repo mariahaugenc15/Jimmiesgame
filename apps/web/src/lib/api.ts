@@ -10,12 +10,12 @@ export class ApiError extends Error {
 }
 
 function getToken(): string | null {
-  return localStorage.getItem("jimmiesgame_token");
+  return localStorage.getItem("lockedin_token");
 }
 
 export function setToken(token: string | null) {
-  if (token) localStorage.setItem("jimmiesgame_token", token);
-  else localStorage.removeItem("jimmiesgame_token");
+  if (token) localStorage.setItem("lockedin_token", token);
+  else localStorage.removeItem("lockedin_token");
 }
 
 export function getStoredToken() {

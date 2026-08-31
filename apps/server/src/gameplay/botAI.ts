@@ -1,4 +1,4 @@
-import type { DefensivePlay, DownState, OffensivePlay } from "@jimmiesgame/shared";
+import type { DefensivePlay, DownState, OffensivePlay } from "@lockedin/shared";
 
 const OFFENSIVE_PLAYS: OffensivePlay[] = [
   "inside_run",

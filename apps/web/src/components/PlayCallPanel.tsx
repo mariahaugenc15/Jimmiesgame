@@ -1,4 +1,4 @@
-import type { DefensivePlay, OffensivePlay } from "@jimmiesgame/shared";
+import type { DefensivePlay, OffensivePlay } from "@lockedin/shared";
 
 const OFFENSIVE_PLAYS: { play: OffensivePlay; label: string }[] = [
   { play: "inside_run", label: "Inside Run" },

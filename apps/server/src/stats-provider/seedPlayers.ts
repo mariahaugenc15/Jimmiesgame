@@ -1,4 +1,4 @@
-import type { NFLPlayer } from "@jimmiesgame/shared";
+import type { NFLPlayer } from "@lockedin/shared";
 
 /**
  * Curated snapshot of real active NFL players for local/dev/demo use, sized

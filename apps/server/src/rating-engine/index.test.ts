@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { WeeklyStatLine } from "@jimmiesgame/shared";
+import type { WeeklyStatLine } from "@lockedin/shared";
 import { computeRatingFromStats, computeRatingsForWeek } from "./index.js";
 
 function statLine(overrides: Partial<WeeklyStatLine>): WeeklyStatLine {

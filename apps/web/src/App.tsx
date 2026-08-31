@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { RosterPage } from "./pages/RosterPage";
 import { MatchPage } from "./pages/MatchPage";
 import { LeaguesPage } from "./pages/LeaguesPage";
+import { BrandTestPage } from "./pages/BrandTestPage";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -23,6 +24,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/brand" element={<BrandTestPage />} />
         <Route
           path="/"
           element={

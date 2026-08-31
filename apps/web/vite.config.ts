@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg"],
       manifest: {
-        name: "Jimmies Game",
-        short_name: "Jimmies",
-        description: "Fantasy football head-to-head: draft real NFL players, play abstract weekly matchups.",
+        name: "Locked In",
+        short_name: "Locked In",
+        description: "Draft real NFL players, lock in your roster for the season, and play abstract head-to-head matchups.",
         theme_color: "#0f172a",
         background_color: "#0f172a",
         display: "standalone",

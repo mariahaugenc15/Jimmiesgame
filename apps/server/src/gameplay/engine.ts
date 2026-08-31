@@ -5,7 +5,7 @@ import type {
   GameState,
   OffensivePlay,
   PlayResult,
-} from "@jimmiesgame/shared";
+} from "@lockedin/shared";
 
 export interface OffenseProfile {
   qbAccuracy: number;
