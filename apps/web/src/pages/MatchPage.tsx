@@ -7,6 +7,7 @@ import { FieldView } from "../components/FieldView";
 import { PlayCallPanel } from "../components/PlayCallPanel";
 import { ProbabilityBar } from "../components/ProbabilityBar";
 import { LockedInLogo } from "../components/LockedInLogo";
+import { PlayDiagram } from "../components/playdiagram/PlayDiagram";
 
 // Vercel's hosting runs the server in short-lived, disconnected pieces
 // rather than one continuously-running process, so a WebSocket connection
@@ -129,11 +130,14 @@ export function MatchPage() {
       />
 
       {state.lastPlay && (
-        <div className="space-y-2 rounded-lg bg-slate-900 p-3">
-          <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} color="#38bdf8" />
-          {state.lastPlay.breakawayChance > 0 && (
-            <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
-          )}
+        <div className="space-y-3">
+          <PlayDiagram key={state.log.length} play={state.lastPlay.offensivePlay} result={state.lastPlay} />
+          <div className="space-y-2 rounded-lg bg-surface-card p-3">
+            <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} color="#38bdf8" />
+            {state.lastPlay.breakawayChance > 0 && (
+              <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
+            )}
+          </div>
         </div>
       )}
 

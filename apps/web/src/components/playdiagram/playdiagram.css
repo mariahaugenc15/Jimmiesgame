@@ -1,0 +1,58 @@
+@keyframes play-diagram-route-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.play-diagram-route {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: play-diagram-route-draw 650ms ease-out forwards;
+}
+
+@keyframes play-diagram-badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.play-diagram-badge {
+  animation: play-diagram-badge-pop 260ms ease-out 550ms both;
+}
+
+@keyframes play-diagram-td-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    r: 9;
+  }
+  50% {
+    opacity: 0.05;
+    r: 18;
+  }
+}
+.play-diagram-td-pulse {
+  animation: play-diagram-td-pulse 900ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .play-diagram-route {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .play-diagram-badge {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .play-diagram-td-pulse {
+    animation: none;
+    opacity: 0.15;
+  }
+}
