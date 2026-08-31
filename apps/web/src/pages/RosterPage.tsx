@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { LockButton } from "../components/LockButton";
+import { Card } from "../components/ui/Card";
+import { SectionHeader } from "../components/ui/SectionHeader";
+import { PlayerCard } from "../components/ui/PlayerCard";
+import { RosterIcon } from "../components/navIcons";
+import { buttonSecondary } from "../lib/ui";
 
 interface RosterEntry {
   nflPlayerId: string;
@@ -43,6 +48,7 @@ export function RosterPage() {
   }, []);
 
   const rosteredIds = new Set(roster.map((r) => r.nflPlayerId));
+  const ratingById = new Map(allPlayers.map((p) => [p.id, p.rating?.overall ?? null]));
 
   async function swap(dropPlayerId: string, position: string) {
     if (!teamId) return;
@@ -76,66 +82,102 @@ export function RosterPage() {
     }
   }
 
-  const bySlot = SLOT_ORDER.flatMap((slot) => roster.filter((r) => r.rosterPosition === slot));
+  const starters = SLOT_ORDER.filter((s) => s !== "BENCH").flatMap((slot) =>
+    roster.filter((r) => r.rosterPosition === slot),
+  );
+  const bench = roster.filter((r) => r.rosterPosition === "BENCH");
+
+  function renderCard(entry: RosterEntry) {
+    return (
+      <PlayerCard
+        key={entry.draftRound}
+        name={entry.player?.name ?? "Unknown"}
+        position={entry.player?.position ?? "—"}
+        slot={entry.rosterPosition}
+        team={entry.player?.realNflTeam ?? ""}
+        overall={entry.player ? (ratingById.get(entry.nflPlayerId) ?? null) : null}
+        action={
+          !locked && entry.player ? (
+            <LockButton
+              label="Lock In Pick"
+              lockedLabel="Locked"
+              resetAfterMs={1500}
+              onConfirm={() => swap(entry.nflPlayerId, entry.player!.position)}
+              className="shrink-0 px-2.5 py-1.5 text-[11px]"
+            />
+          ) : undefined
+        }
+      />
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 pb-20">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-emerald-400">My Roster</h1>
+    <div className="mx-auto max-w-6xl space-y-5 p-4 pb-24 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500/15 text-primary-400">
+            <RosterIcon />
+          </span>
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-white">My Roster</h1>
+            <p className="text-sm text-slate-500">Manage your lineup before it locks for the season.</p>
+          </div>
+        </div>
         {!locked && teamId && roster.length > 0 && (
           <button
             onClick={() => setShowLockConfirm(true)}
-            className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-semibold hover:bg-amber-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-locked-600 px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-all hover:bg-locked-500 active:scale-[0.98]"
           >
             Lock In Your Roster
           </button>
         )}
-        {locked && <span className="text-sm text-amber-400">Locked for season</span>}
+        {locked && (
+          <span className="rounded-full border border-locked-500/40 bg-locked-500/10 px-3 py-1.5 text-xs font-semibold text-locked-300">
+            Locked for season
+          </span>
+        )}
       </div>
-      {status && <p className="rounded-md bg-slate-900 p-3 text-sm text-slate-300">{status}</p>}
 
-      {roster.length === 0 && <p className="text-slate-400">No roster yet — run a solo draft from the Dashboard first.</p>}
+      {status && (
+        <div className="rounded-lg border border-surface-border bg-surface-card px-4 py-2.5 text-sm text-slate-300">
+          {status}
+        </div>
+      )}
 
-      <div className="divide-y divide-slate-800 rounded-xl bg-slate-900">
-        {bySlot.map((entry) => (
-          <div key={entry.draftRound} className="flex items-center justify-between px-4 py-3">
-            <div>
-              <span className="mr-3 inline-block w-14 text-xs font-bold text-emerald-400">{entry.rosterPosition}</span>
-              <span className="font-medium">{entry.player?.name ?? "Unknown"}</span>
-              <span className="ml-2 text-xs text-slate-500">
-                {entry.player?.position} · {entry.player?.realNflTeam}
-              </span>
-            </div>
-            {!locked && entry.player && (
-              <LockButton
-                label="Lock In Pick"
-                lockedLabel="Pick Locked In"
-                resetAfterMs={1500}
-                onConfirm={() => swap(entry.nflPlayerId, entry.player!.position)}
-                className="px-3 py-1 text-xs"
-              />
-            )}
-          </div>
-        ))}
-      </div>
+      {roster.length === 0 && (
+        <Card elevated className="p-6">
+          <SectionHeader title="No roster yet" subtitle="Run a solo draft from the Dashboard first to build your lineup." />
+        </Card>
+      )}
+
+      {roster.length > 0 && (
+        <div className="grid gap-4 lg:grid-cols-5">
+          <Card elevated className="p-5 lg:col-span-3">
+            <SectionHeader title="Starting lineup" subtitle="Your active roster slots for this matchup." />
+            <div className="space-y-2">{starters.map(renderCard)}</div>
+          </Card>
+
+          <Card className="p-5 lg:col-span-2">
+            <SectionHeader title="Bench" subtitle={`${bench.length} reserves`} />
+            <div className="space-y-2">{bench.map(renderCard)}</div>
+          </Card>
+        </div>
+      )}
 
       {showLockConfirm && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-slate-900 p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-slate-100">Ready to lock in?</h2>
+          <Card elevated className="w-full max-w-sm p-6">
+            <h2 className="text-lg font-bold text-white">Ready to lock in?</h2>
             <p className="mt-2 text-sm text-slate-400">
               Your roster is set for the entire season once you do. No trades or free agency after this point.
             </p>
             <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setShowLockConfirm(false)}
-                className="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold hover:bg-slate-700"
-              >
+              <button onClick={() => setShowLockConfirm(false)} className={buttonSecondary}>
                 Cancel
               </button>
               <LockButton label="Lock In Your Roster" onConfirm={confirmLockRoster} />
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </div>
