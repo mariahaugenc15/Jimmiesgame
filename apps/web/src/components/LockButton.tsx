@@ -68,12 +68,12 @@ export function LockButton({
       disabled={disabled || state === "confirming" || isPermanentlyLocked}
       aria-busy={state === "confirming"}
       data-state={state}
-      className={`lock-button inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-90 ${
+      className={`lock-button inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold shadow-card transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-90 ${
         state === "error"
-          ? "bg-red-900 text-red-200"
+          ? "bg-danger-600 text-white"
           : state === "locked"
-            ? "bg-emerald-800 text-emerald-100"
-            : "bg-emerald-700 text-white hover:bg-emerald-600 disabled:hover:bg-emerald-700"
+            ? "bg-primary-900 text-primary-300"
+            : "bg-primary-600 text-white hover:bg-primary-500 hover:shadow-glow disabled:hover:bg-primary-600 disabled:hover:shadow-card"
       } ${className ?? ""}`}
     >
       <LockIcon locked={iconLocked} size={18} />

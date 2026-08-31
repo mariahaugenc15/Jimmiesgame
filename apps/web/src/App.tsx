@@ -28,7 +28,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-slate-950">
+    <div className="min-h-screen bg-surface-page text-slate-100">
       <Nav />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
