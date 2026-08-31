@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "dist/**/*.js": {
+      "includeFiles": "drizzle/**"
+    }
+  }
+}
