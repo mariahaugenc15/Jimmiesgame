@@ -1,7 +1,7 @@
 lockfileVersion: '9.0'
 
 settings:
-  autoInstallPeers: true
+  autoInstallPeers: false
   excludeLinksFromLockfile: false
 
 overrides:
@@ -129,7 +129,7 @@ importers:
         version: 5.4.21(@types/node@22.20.1)(terser@5.51.2)
       vite-plugin-pwa:
         specifier: ^0.20.5
-        version: 0.20.5(vite@5.4.21(@types/node@22.20.1)(terser@5.51.2))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1)
+        version: 0.20.5(@types/babel__core@7.20.5)(vite@5.4.21(@types/node@22.20.1)(terser@5.51.2))
 
   packages/shared:
     devDependencies:
@@ -3183,8 +3183,6 @@ packages:
     peerDependencies:
       '@vite-pwa/assets-generator': ^0.2.6
       vite: ^3.1.0 || ^4.0.0 || ^5.0.0
-      workbox-build: ^7.1.0
-      workbox-window: ^7.1.0
     peerDependenciesMeta:
       '@vite-pwa/assets-generator':
         optional: true
@@ -6440,7 +6438,7 @@ snapshots:
       - supports-color
       - terser
 
-  vite-plugin-pwa@0.20.5(vite@5.4.21(@types/node@22.20.1)(terser@5.51.2))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1):
+  vite-plugin-pwa@0.20.5(@types/babel__core@7.20.5)(vite@5.4.21(@types/node@22.20.1)(terser@5.51.2)):
     dependencies:
       debug: 4.4.3
       pretty-bytes: 6.1.1
@@ -6449,6 +6447,7 @@ snapshots:
       workbox-build: 7.4.1(@types/babel__core@7.20.5)
       workbox-window: 7.4.1
     transitivePeerDependencies:
+      - '@types/babel__core'
       - supports-color
 
   vite@5.4.21(@types/node@22.20.1)(terser@5.51.2):
