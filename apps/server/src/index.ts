@@ -12,6 +12,7 @@ import { matchesRouter } from "./routes/matches.js";
 import { matchmakingRouter } from "./routes/matchmaking.js";
 import { leaguesRouter } from "./routes/leagues.js";
 import { adminRouter } from "./routes/admin.js";
+import { setupRouter } from "./routes/setup.js";
 import { registerSocketHandlers } from "./realtime/socket.js";
 import { runWeeklySync, scheduleWeeklyRatingSync } from "./jobs/weeklyRatingSync.js";
 
@@ -20,6 +21,7 @@ app.use(cors({ origin: env.corsOrigin }));
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+app.use("/setup", setupRouter);
 
 app.use("/api/auth", authRouter);
 app.use("/api/teams", teamsRouter);
