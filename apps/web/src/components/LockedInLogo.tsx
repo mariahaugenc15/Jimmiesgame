@@ -33,7 +33,7 @@ export function LockedInLogo({ mode = "once", size = 40, showWordmark = true, cl
     <div className={`flex items-center gap-2 ${className ?? ""}`}>
       <LockIcon locked={locked} size={size} />
       {showWordmark && (
-        <span className="text-xl font-extrabold tracking-tight text-slate-100">
+        <span className="text-xl font-extrabold uppercase tracking-tight text-slate-100">
           Locked <span className="text-emerald-400">In</span>
         </span>
       )}

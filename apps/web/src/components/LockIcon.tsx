@@ -33,8 +33,11 @@ export function LockIcon({ locked, size = 28, className }: LockIconProps) {
         data-locked={locked}
       />
       <rect x={6} y={15} width={20} height={13} rx={3} className="lock-body" data-locked={locked} />
-      <circle cx={16} cy={20} r={1.6} className="lock-keyhole" />
-      <rect x={15} y={21} width={2} height={4} className="lock-keyhole" />
+      {/* football laces, in place of a keyhole — the brand's visual tie to the sport */}
+      <line x1={16} y1={18} x2={16} y2={25} className="lock-laces" />
+      <line x1={13.5} y1={19.5} x2={18.5} y2={19.5} className="lock-laces" />
+      <line x1={13.5} y1={22} x2={18.5} y2={22} className="lock-laces" />
+      <line x1={13.5} y1={24.5} x2={18.5} y2={24.5} className="lock-laces" />
     </svg>
   );
 }

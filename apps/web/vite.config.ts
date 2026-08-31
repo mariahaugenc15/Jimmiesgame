@@ -16,7 +16,9 @@ export default defineConfig({
         background_color: "#0f172a",
         display: "standalone",
         icons: [
-          { src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
+          // The badge has content near its edges (the shield point, the "LOCKED IN"
+          // banner), so it's declared "any" only — a maskable safe zone would clip it.
+          { src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
         ],
       },
     }),
