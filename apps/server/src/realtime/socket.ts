@@ -34,15 +34,27 @@ export function registerSocketHandlers(io: Server) {
 
     socket.on(
       "match:playcall",
-      (payload: { matchId: string; teamId: string; play: string }, ack?: (res: unknown) => void) => {
+      async (payload: { matchId: string; teamId: string; play: string }, ack?: (res: unknown) => void) => {
+        let result;
         try {
-          const result = submitPlayCall(payload.matchId, payload.teamId, payload.play as never);
-          io.to(matchRoom(payload.matchId)).emit("match:state", result.state);
-          if (result.playResult) {
-            io.to(matchRoom(payload.matchId)).emit("match:play-result", result.playResult);
-          }
-          if (result.gameOver) {
-            void db
+          result = submitPlayCall(payload.matchId, payload.teamId, payload.play as never);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Unknown error resolving playcall.";
+          ack?.({ ok: false, error: message });
+          socket.emit("match:error", { error: message });
+          return;
+        }
+
+        io.to(matchRoom(payload.matchId)).emit("match:state", result.state);
+        if (result.playResult) {
+          io.to(matchRoom(payload.matchId)).emit("match:play-result", result.playResult);
+        }
+        if (result.gameOver) {
+          try {
+            // Awaited deliberately: Drizzle's query builder only actually sends
+            // the SQL once you await/.then() it, so a "fire and forget" void
+            // call here would silently never persist the completed match.
+            await db
               .update(matches)
               .set({
                 status: "completed",
@@ -51,13 +63,11 @@ export function registerSocketHandlers(io: Server) {
                 completedAt: new Date(),
               })
               .where(eq(matches.id, payload.matchId));
+          } catch (err) {
+            console.error(`Failed to persist completed match ${payload.matchId}:`, err);
           }
-          ack?.({ ok: true, resolved: result.resolved });
-        } catch (err) {
-          const message = err instanceof Error ? err.message : "Unknown error resolving playcall.";
-          ack?.({ ok: false, error: message });
-          socket.emit("match:error", { error: message });
         }
+        ack?.({ ok: true, resolved: result.resolved });
       },
     );
 
