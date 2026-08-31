@@ -34,7 +34,7 @@ export function FieldView({ down, lastPlay, possessionIsHome, selectedOffensiveP
   if (!down) {
     return (
       <div className="flex h-56 items-center justify-center rounded-xl bg-pitch text-slate-300">
-        Waiting for kickoff…
+        Locked In and Ready — waiting for kickoff…
       </div>
     );
   }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
+import { LockButton } from "../components/LockButton";
 
 interface RosterEntry {
   nflPlayerId: string;
@@ -24,6 +25,7 @@ export function RosterPage() {
   const [allPlayers, setAllPlayers] = useState<RatedPlayer[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
 
   async function load() {
     const teams = await api.myTeams();
@@ -49,7 +51,7 @@ export function RosterPage() {
       .sort((a, b) => (b.rating?.overall ?? 0) - (a.rating?.overall ?? 0))[0];
     if (!replacement) {
       setStatus(`No available ${position} to swap in.`);
-      return;
+      throw new Error("no replacement available");
     }
     try {
       await api.swapPlayer(teamId, dropPlayerId, replacement.id);
@@ -57,17 +59,20 @@ export function RosterPage() {
       await load();
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : "Swap failed.");
+      throw err;
     }
   }
 
-  async function lockRoster() {
+  async function confirmLockRoster() {
     if (!teamId) return;
     try {
       await api.lockTeam(teamId);
       setLocked(true);
-      setStatus("Roster locked for the season.");
+      setStatus("Roster Locked In for the Season");
+      setShowLockConfirm(false);
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : "Lock failed.");
+      throw err;
     }
   }
 
@@ -78,8 +83,11 @@ export function RosterPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-emerald-400">My Roster</h1>
         {!locked && teamId && roster.length > 0 && (
-          <button onClick={lockRoster} className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-semibold hover:bg-amber-600">
-            Lock roster
+          <button
+            onClick={() => setShowLockConfirm(true)}
+            className="rounded-md bg-amber-700 px-3 py-1.5 text-sm font-semibold hover:bg-amber-600"
+          >
+            Lock In Your Roster
           </button>
         )}
         {locked && <span className="text-sm text-amber-400">Locked for season</span>}
@@ -90,7 +98,7 @@ export function RosterPage() {
 
       <div className="divide-y divide-slate-800 rounded-xl bg-slate-900">
         {bySlot.map((entry) => (
-          <div key={entry.nflPlayerId} className="flex items-center justify-between px-4 py-3">
+          <div key={entry.draftRound} className="flex items-center justify-between px-4 py-3">
             <div>
               <span className="mr-3 inline-block w-14 text-xs font-bold text-emerald-400">{entry.rosterPosition}</span>
               <span className="font-medium">{entry.player?.name ?? "Unknown"}</span>
@@ -99,16 +107,37 @@ export function RosterPage() {
               </span>
             </div>
             {!locked && entry.player && (
-              <button
-                onClick={() => swap(entry.nflPlayerId, entry.player!.position)}
-                className="rounded-md bg-slate-800 px-3 py-1 text-xs hover:bg-slate-700"
-              >
-                Swap
-              </button>
+              <LockButton
+                label="Lock In Pick"
+                lockedLabel="Pick Locked In"
+                resetAfterMs={1500}
+                onConfirm={() => swap(entry.nflPlayerId, entry.player!.position)}
+                className="px-3 py-1 text-xs"
+              />
             )}
           </div>
         ))}
       </div>
+
+      {showLockConfirm && (
+        <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-slate-900 p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-slate-100">Ready to lock in?</h2>
+            <p className="mt-2 text-sm text-slate-400">
+              Your roster is set for the entire season once you do. No trades or free agency after this point.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setShowLockConfirm(false)}
+                className="rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <LockButton label="Lock In Your Roster" onConfirm={confirmLockRoster} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

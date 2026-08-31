@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
+import { LockButton } from "../components/LockButton";
 
 interface TeamRow {
   id: string;
@@ -69,14 +70,13 @@ export function DashboardPage() {
 
   async function playVsBot(botTeamId: string) {
     if (!myTeam) return;
-    setBusy(true);
     try {
       const match = await api.createMatch(myTeam.id, botTeamId, 1);
       await api.startMatch(match.id);
       navigate(`/match/${match.id}?team=${myTeam.id}`);
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : "Could not start match.");
-      setBusy(false);
+      throw err;
     }
   }
 
@@ -160,14 +160,10 @@ export function DashboardPage() {
             <h2 className="mb-2 font-semibold">Play against a bot</h2>
             <div className="space-y-2">
               {botTeams.map((bot) => (
-                <button
-                  key={bot.id}
-                  onClick={() => playVsBot(bot.id)}
-                  disabled={busy}
-                  className="w-full rounded-md bg-slate-800 px-4 py-2 text-left text-sm hover:bg-slate-700 disabled:opacity-50"
-                >
-                  {bot.name}
-                </button>
+                <div key={bot.id} className="flex items-center justify-between rounded-md bg-slate-800 px-4 py-2">
+                  <span className="text-sm">{bot.name}</span>
+                  <LockButton label="Lock In Lineup" onConfirm={() => playVsBot(bot.id)} className="px-3 py-1 text-xs" />
+                </div>
               ))}
               {botTeams.length === 0 && <p className="text-sm text-slate-500">No bot opponents yet.</p>}
             </div>

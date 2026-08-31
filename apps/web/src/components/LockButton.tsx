@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LockIcon } from "./LockIcon";
+import "./lock-button.css";
 
 type LockButtonState = "idle" | "confirming" | "locked" | "error";
 
@@ -67,7 +68,7 @@ export function LockButton({
       disabled={disabled || state === "confirming" || isPermanentlyLocked}
       aria-busy={state === "confirming"}
       data-state={state}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-90 ${
+      className={`lock-button inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-90 ${
         state === "error"
           ? "bg-red-900 text-red-200"
           : state === "locked"

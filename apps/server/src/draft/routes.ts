@@ -89,6 +89,9 @@ draftRouter.post("/solo", requireAuth, async (req: AuthedRequest, res) => {
 draftRouter.get("/teams/:teamId/roster", requireAuth, async (req: AuthedRequest, res) => {
   const slots = await db.query.rosterSlots.findMany({
     where: eq(rosterSlots.teamId, req.params.teamId),
+    // draftRound is preserved across a swap (see /swap below), so ordering by it keeps
+    // each physical roster slot in the same list position even after its occupant changes.
+    orderBy: (rs, { asc }) => [asc(rs.draftRound)],
   });
   const players = await db.query.nflPlayers.findMany();
   const playerById = new Map(players.map((p) => [p.id, p]));

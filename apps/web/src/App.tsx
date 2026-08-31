@@ -9,10 +9,19 @@ import { RosterPage } from "./pages/RosterPage";
 import { MatchPage } from "./pages/MatchPage";
 import { LeaguesPage } from "./pages/LeaguesPage";
 import { BrandTestPage } from "./pages/BrandTestPage";
+import { LockedInLogo } from "./components/LockedInLogo";
+
+function AppLoading() {
+  return (
+    <div className="flex h-[70vh] items-center justify-center">
+      <LockedInLogo mode="loop" size={48} />
+    </div>
+  );
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <p className="p-4 text-slate-400">Loading…</p>;
+  if (loading) return <AppLoading />;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }

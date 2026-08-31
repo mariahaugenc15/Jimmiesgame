@@ -6,6 +6,7 @@ import { ScoreBoard } from "../components/ScoreBoard";
 import { FieldView } from "../components/FieldView";
 import { PlayCallPanel } from "../components/PlayCallPanel";
 import { ProbabilityBar } from "../components/ProbabilityBar";
+import { LockedInLogo } from "../components/LockedInLogo";
 
 export function MatchPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -60,7 +61,12 @@ export function MatchPage() {
   }
 
   if (!state) {
-    return <p className="p-4 text-slate-400">Connecting to match…</p>;
+    return (
+      <div className="flex h-[70vh] flex-col items-center justify-center gap-3">
+        <LockedInLogo mode="loop" size={48} showWordmark={false} />
+        <p className="text-slate-400">Locking In…</p>
+      </div>
+    );
   }
 
   const possessionIsHome = state.possessionTeamId === state.homeTeamId;
