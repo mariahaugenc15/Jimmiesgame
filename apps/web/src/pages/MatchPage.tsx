@@ -7,6 +7,7 @@ import { FieldView } from "../components/FieldView";
 import { PlayCallPanel } from "../components/PlayCallPanel";
 import { ProbabilityBar } from "../components/ProbabilityBar";
 import { LockedInLogo } from "../components/LockedInLogo";
+import { api } from "../lib/api";
 
 export function MatchPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -18,6 +19,7 @@ export function MatchPage() {
   const [selectedOffense, setSelectedOffense] = useState<OffensivePlay | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [waitingForResolution, setWaitingForResolution] = useState(false);
+  const [teamNames, setTeamNames] = useState<{ home: string; away: string }>({ home: "Home", away: "Away" });
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -44,6 +46,13 @@ export function MatchPage() {
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
   }, [state?.log.length]);
+
+  useEffect(() => {
+    if (!state) return;
+    Promise.all([api.getTeam(state.homeTeamId), api.getTeam(state.awayTeamId)])
+      .then(([home, away]) => setTeamNames({ home: home.name, away: away.name }))
+      .catch(() => {});
+  }, [state?.homeTeamId, state?.awayTeamId]);
 
   function submitPlay(play: OffensivePlay | DefensivePlay) {
     if (!matchId || !teamId) return;
@@ -78,8 +87,8 @@ export function MatchPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4 pb-20">
       <ScoreBoard
-        homeName="Home"
-        awayName="Away"
+        homeName={teamNames.home}
+        awayName={teamNames.away}
         homeScore={state.homeScore}
         awayScore={state.awayScore}
         clock={state.clock}
@@ -125,7 +134,7 @@ export function MatchPage() {
 
       <div ref={logRef} className="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-400">
         {state.log.map((line, i) => (
-          <p key={i}>{line.split(state.homeTeamId).join("Home").split(state.awayTeamId).join("Away")}</p>
+          <p key={i}>{line.split(state.homeTeamId).join(teamNames.home).split(state.awayTeamId).join(teamNames.away)}</p>
         ))}
       </div>
     </div>

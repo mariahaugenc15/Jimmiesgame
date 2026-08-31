@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { DefensivePlay, OffensivePlay } from "@lockedin/shared";
 
 const OFFENSIVE_PLAYS: { play: OffensivePlay; label: string }[] = [
@@ -24,26 +25,51 @@ interface PlayCallPanelProps {
   disabled?: boolean;
 }
 
+/**
+ * Madden-style playcalling: each play gets a number-key hotkey (1-6 on
+ * offense, 1-5 on defense) shown as an on-screen badge, in addition to
+ * being clickable/tappable — keyboard on desktop, touch on mobile.
+ */
 export function PlayCallPanel({ mode, onSelectOffense, onSelectDefense, disabled }: PlayCallPanelProps) {
+  const options = mode === "waiting" ? [] : mode === "offense" ? OFFENSIVE_PLAYS : DEFENSIVE_PLAYS;
+
+  useEffect(() => {
+    if (mode === "waiting" || disabled) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const index = Number(e.key) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= options.length) return;
+      const target = document.activeElement as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
+      const { play } = options[index];
+      if (mode === "offense") onSelectOffense?.(play as OffensivePlay);
+      else onSelectDefense?.(play as DefensivePlay);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mode, disabled, options, onSelectOffense, onSelectDefense]);
+
   if (mode === "waiting") {
     return <div className="rounded-lg bg-slate-900 p-4 text-center text-slate-400">Waiting for the other side…</div>;
   }
-
-  const options = mode === "offense" ? OFFENSIVE_PLAYS : DEFENSIVE_PLAYS;
 
   return (
     <div className="rounded-lg bg-slate-900 p-4">
       <p className="mb-3 text-sm font-semibold text-slate-300">
         {mode === "offense" ? "Call your play" : "Call your defense"}
+        <span className="ml-2 font-normal text-slate-500">— press a number key</span>
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {options.map(({ play, label }) => (
+        {options.map(({ play, label }, i) => (
           <button
             key={play}
             disabled={disabled}
             onClick={() => (mode === "offense" ? onSelectOffense?.(play as OffensivePlay) : onSelectDefense?.(play as DefensivePlay))}
-            className="rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
+            <kbd className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-950 font-mono text-xs text-emerald-400">
+              {i + 1}
+            </kbd>
             {label}
           </button>
         ))}

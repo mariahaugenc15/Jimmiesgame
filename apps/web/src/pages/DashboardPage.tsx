@@ -26,19 +26,18 @@ export function DashboardPage() {
     const [seasonList, teamList] = await Promise.all([api.seasons(), api.myTeams()]);
     setSeasons(seasonList);
     setTeams(teamList);
+    const mine = teamList.find((t) => !t.name.startsWith("Bot Squad"));
+    if (mine) {
+      const roster = await api.roster(mine.id);
+      setRosterCount(roster.length);
+    } else {
+      setRosterCount(null);
+    }
   }
 
   useEffect(() => {
     refresh().catch((err) => setStatus(err instanceof ApiError ? err.message : "Failed to load."));
   }, []);
-
-  useEffect(() => {
-    if (!myTeam) return;
-    api
-      .roster(myTeam.id)
-      .then((r) => setRosterCount(r.length))
-      .catch(() => setRosterCount(0));
-  }, [myTeam?.id]);
 
   async function createTeam() {
     if (!seasons[0]) return;

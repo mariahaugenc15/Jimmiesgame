@@ -27,3 +27,11 @@ teamsRouter.get("/mine", requireAuth, async (req: AuthedRequest, res) => {
   const mine = await db.query.teams.findMany({ where: eq(teams.ownerId, req.auth!.userId) });
   res.json(mine);
 });
+
+// Basic team identity (id/name) is public to any authenticated user — an
+// opponent needs to see your team's name on the scoreboard during a match.
+teamsRouter.get("/:id", requireAuth, async (req, res) => {
+  const team = await db.query.teams.findFirst({ where: eq(teams.id, req.params.id) });
+  if (!team) return res.status(404).json({ error: "Team not found." });
+  res.json({ id: team.id, name: team.name });
+});
