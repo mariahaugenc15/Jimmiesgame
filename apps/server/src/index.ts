@@ -1,6 +1,11 @@
 import http from "node:http";
 import cors from "cors";
 import express from "express";
+// Patches Express 4's router so a rejected promise inside an async route
+// handler reaches the error middleware below, instead of the request just
+// hanging forever with no response (Express 4 doesn't do this on its own -
+// fixed natively in Express 5, but this app is still on 4).
+import "express-async-errors";
 import { Server } from "socket.io";
 import { env } from "./env.js";
 import { authRouter } from "./auth/routes.js";
