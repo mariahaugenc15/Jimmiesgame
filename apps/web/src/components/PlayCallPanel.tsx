@@ -50,14 +50,20 @@ export function PlayCallPanel({ mode, onSelectOffense, onSelectDefense, disabled
   }, [mode, disabled, options, onSelectOffense, onSelectDefense]);
 
   if (mode === "waiting") {
-    return <div className="rounded-lg bg-slate-900 p-4 text-center text-slate-400">Waiting for the other side…</div>;
+    return (
+      <div className="rounded-lg border border-surface-border bg-surface-card p-4 text-center text-slate-400">
+        Waiting for the other side…
+      </div>
+    );
   }
 
   return (
-    <div className="rounded-lg bg-slate-900 p-4">
-      <p className="mb-3 text-sm font-semibold text-slate-300">
+    <div className="rounded-lg border border-surface-border bg-surface-card p-4">
+      <p className="mb-3 text-sm font-semibold text-slate-200">
         {mode === "offense" ? "Call your play" : "Call your defense"}
-        <span className="ml-2 font-normal text-slate-500">— press a number key</span>
+        <span className="ml-2 font-normal text-slate-500">
+          — press the number shown, or click/tap a play
+        </span>
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {options.map(({ play, label }, i) => (
@@ -65,9 +71,9 @@ export function PlayCallPanel({ mode, onSelectOffense, onSelectDefense, disabled
             key={play}
             disabled={disabled}
             onClick={() => (mode === "offense" ? onSelectOffense?.(play as OffensivePlay) : onSelectDefense?.(play as DefensivePlay))}
-            className="flex items-center gap-2 rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-md border border-surface-border bg-surface-raised px-3 py-2 text-sm font-medium text-slate-100 transition-all hover:border-primary-500/40 hover:bg-primary-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <kbd className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-950 font-mono text-xs text-emerald-400">
+            <kbd className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-page font-mono text-xs text-primary-400">
               {i + 1}
             </kbd>
             {label}

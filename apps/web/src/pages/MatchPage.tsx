@@ -8,6 +8,7 @@ import { PlayCallPanel } from "../components/PlayCallPanel";
 import { ProbabilityBar } from "../components/ProbabilityBar";
 import { LockedInLogo } from "../components/LockedInLogo";
 import { PlayDiagram } from "../components/playdiagram/PlayDiagram";
+import { HowToPlay } from "../components/HowToPlay";
 
 // Vercel's hosting runs the server in short-lived, disconnected pieces
 // rather than one continuously-running process, so a WebSocket connection
@@ -122,6 +123,8 @@ export function MatchPage() {
         phase={state.phase}
       />
 
+      {state.phase !== "final" && <HowToPlay />}
+
       <FieldView
         down={state.down}
         lastPlay={state.lastPlay}
@@ -141,12 +144,14 @@ export function MatchPage() {
         </div>
       )}
 
-      {error && <p className="rounded-md bg-red-950 p-3 text-sm text-red-300">{error}</p>}
+      {error && (
+        <p className="rounded-md border border-danger-500/30 bg-danger-500/10 p-3 text-sm text-danger-300">{error}</p>
+      )}
 
       {state.phase === "final" ? (
-        <div className="rounded-xl bg-slate-900 p-6 text-center">
-          <p className="text-lg font-bold text-emerald-400">Final score</p>
-          <p className="text-2xl font-bold">
+        <div className="rounded-xl border border-primary-500/30 bg-surface-raised p-6 text-center shadow-raised">
+          <p className="text-lg font-bold text-primary-400">Final score</p>
+          <p className="mt-1 text-2xl font-extrabold text-white">
             {state.homeScore} – {state.awayScore}
           </p>
         </div>
@@ -162,7 +167,10 @@ export function MatchPage() {
         />
       )}
 
-      <div ref={logRef} className="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-400">
+      <div
+        ref={logRef}
+        className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-surface-border bg-surface-card p-3 text-xs text-slate-400"
+      >
         {state.log.map((line, i) => (
           <p key={i}>{line.split(state.homeTeamId).join(teamNames.home).split(state.awayTeamId).join(teamNames.away)}</p>
         ))}
