@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./client.js";
 import { nflPlayers, seasons } from "./schema.js";
+import { SCHEMA_SQL } from "./schemaSql.js";
 import { statsProvider } from "../stats-provider/index.js";
 
 export interface SetupResult {
@@ -17,7 +17,7 @@ export interface SetupResult {
  * Idempotent: safe to run more than once against the same database.
  */
 export async function runInitialSetup(): Promise<SetupResult> {
-  await migrate(db, { migrationsFolder: "./drizzle" });
+  await db.execute(sql.raw(SCHEMA_SQL));
 
   const players = await statsProvider.listActivePlayers();
   for (const player of players) {
