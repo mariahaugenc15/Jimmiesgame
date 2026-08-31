@@ -76,9 +76,16 @@ CREATE TABLE IF NOT EXISTS "matches" (
 	"home_score" integer DEFAULT 0 NOT NULL,
 	"away_score" integer DEFAULT 0 NOT NULL,
 	"replay_log" jsonb,
+	"live_state" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"completed_at" timestamp with time zone
 );
+
+-- The matches table above already existed in production before live_state
+-- was added, so CREATE TABLE IF NOT EXISTS alone won't add the column to an
+-- already-live database - this upgrades it the same way a real migration
+-- would, and is a no-op once the column exists.
+ALTER TABLE "matches" ADD COLUMN IF NOT EXISTS "live_state" jsonb;
 
 CREATE TABLE IF NOT EXISTS "nfl_players" (
 	"id" text PRIMARY KEY NOT NULL,

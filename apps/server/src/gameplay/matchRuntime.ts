@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@lockedin/shared";
 import { db } from "../db/client.js";
-import { rosterSlots, seasons, teams } from "../db/schema.js";
+import { matches, rosterSlots, seasons, teams } from "../db/schema.js";
 import { getRatingsForWeek } from "../db/ratingsRepo.js";
 import { computeRatingFromStats } from "../rating-engine/index.js";
 import { statsProvider } from "../stats-provider/index.js";
@@ -15,14 +15,20 @@ interface PendingCalls {
   defensivePlay?: DefensivePlay;
 }
 
-interface MatchRuntimeEntry {
+/**
+ * The engine's live runtime state, persisted to matches.live_state instead
+ * of kept in an in-memory Map. A single Node process can't be assumed to
+ * handle two requests for the same match in a row (serverless hosting may
+ * run each one in a different instance), so every read and write goes
+ * through the database. Team offense/defense profiles are recomputed from
+ * the roster on each resolved play rather than cached, trading a bit of
+ * per-play latency for not having to persist or invalidate them.
+ */
+interface PersistedRuntime {
   state: GameState;
-  botTeamIds: Set<string>;
-  profiles: Map<string, { offense: OffenseProfile; defense: DefenseProfile }>;
+  botTeamIds: string[];
   pending: PendingCalls;
 }
-
-const runtimeMatches = new Map<string, MatchRuntimeEntry>();
 
 async function loadTeamProfile(teamId: string): Promise<{ offense: OffenseProfile; defense: DefenseProfile }> {
   const slots = await db.query.rosterSlots.findMany({ where: eq(rosterSlots.teamId, teamId) });
@@ -60,30 +66,20 @@ export async function startMatch(
   awayTeamId: string,
   botTeamIds: string[] = [],
 ): Promise<GameState> {
-  const [homeProfile, awayProfile] = await Promise.all([
-    loadTeamProfile(homeTeamId),
-    loadTeamProfile(awayTeamId),
-  ]);
-
   let state = createInitialGameState(matchId, homeTeamId, awayTeamId);
   const receivingTeamId = Math.random() < 0.5 ? homeTeamId : awayTeamId;
   state = startFirstDrive(state, receivingTeamId);
 
-  runtimeMatches.set(matchId, {
-    state,
-    botTeamIds: new Set(botTeamIds),
-    profiles: new Map([
-      [homeTeamId, homeProfile],
-      [awayTeamId, awayProfile],
-    ]),
-    pending: {},
-  });
+  const runtime: PersistedRuntime = { state, botTeamIds, pending: {} };
+  await db.update(matches).set({ liveState: runtime }).where(eq(matches.id, matchId));
 
   return state;
 }
 
-export function getMatchState(matchId: string): GameState | undefined {
-  return runtimeMatches.get(matchId)?.state;
+export async function getMatchState(matchId: string): Promise<GameState | undefined> {
+  const match = await db.query.matches.findFirst({ where: eq(matches.id, matchId) });
+  const runtime = match?.liveState as PersistedRuntime | null | undefined;
+  return runtime?.state;
 }
 
 function offenseAndDefenseTeamIds(state: GameState): { offenseTeamId: string; defenseTeamId: string } {
@@ -92,13 +88,13 @@ function offenseAndDefenseTeamIds(state: GameState): { offenseTeamId: string; de
   return { offenseTeamId, defenseTeamId };
 }
 
-function maybeFillBotCalls(entry: MatchRuntimeEntry) {
-  const { offenseTeamId, defenseTeamId } = offenseAndDefenseTeamIds(entry.state);
-  if (entry.botTeamIds.has(offenseTeamId) && !entry.pending.offensivePlay) {
-    entry.pending.offensivePlay = botChooseOffensivePlay(entry.state.down!);
+function maybeFillBotCalls(runtime: PersistedRuntime) {
+  const { offenseTeamId, defenseTeamId } = offenseAndDefenseTeamIds(runtime.state);
+  if (runtime.botTeamIds.includes(offenseTeamId) && !runtime.pending.offensivePlay) {
+    runtime.pending.offensivePlay = botChooseOffensivePlay(runtime.state.down!);
   }
-  if (entry.botTeamIds.has(defenseTeamId) && !entry.pending.defensivePlay) {
-    entry.pending.defensivePlay = botChooseDefensivePlay(entry.state.down!);
+  if (runtime.botTeamIds.includes(defenseTeamId) && !runtime.pending.defensivePlay) {
+    runtime.pending.defensivePlay = botChooseDefensivePlay(runtime.state.down!);
   }
 }
 
@@ -109,46 +105,76 @@ export interface PlayCallResult {
   gameOver?: boolean;
 }
 
-/** Records one side's playcall; once both offense and defense calls are in, resolves the snap. */
-export function submitPlayCall(
+/**
+ * Records one side's playcall; once both offense and defense calls are in,
+ * resolves the snap. Runs inside a transaction with the match row locked
+ * (SELECT ... FOR UPDATE) so two near-simultaneous submissions from the two
+ * real players in a match can't race each other into reading the same
+ * "only one side has called a play yet" state and both writing a partial
+ * update - the second submission waits for the first to commit, then reads
+ * the up-to-date pending calls.
+ */
+export async function submitPlayCall(
   matchId: string,
   teamId: string,
   play: OffensivePlay | DefensivePlay,
-): PlayCallResult {
-  const entry = runtimeMatches.get(matchId);
-  if (!entry) throw new Error("Match not found or not started.");
-  if (entry.state.phase !== "in_progress" || !entry.state.down) {
-    throw new Error("Match is not currently accepting play calls.");
-  }
+): Promise<PlayCallResult> {
+  return db.transaction(async (tx) => {
+    const [row] = await tx.select().from(matches).where(eq(matches.id, matchId)).for("update");
+    const runtime = row?.liveState as PersistedRuntime | null | undefined;
+    if (!runtime) throw new Error("Match not found or not started.");
+    if (runtime.state.phase !== "in_progress" || !runtime.state.down) {
+      throw new Error("Match is not currently accepting play calls.");
+    }
 
-  const { offenseTeamId, defenseTeamId } = offenseAndDefenseTeamIds(entry.state);
-  if (teamId === offenseTeamId) {
-    entry.pending.offensivePlay = play as OffensivePlay;
-  } else if (teamId === defenseTeamId) {
-    entry.pending.defensivePlay = play as DefensivePlay;
-  } else {
-    throw new Error("Team is not part of this match.");
-  }
+    const { offenseTeamId, defenseTeamId } = offenseAndDefenseTeamIds(runtime.state);
+    if (teamId === offenseTeamId) {
+      runtime.pending.offensivePlay = play as OffensivePlay;
+    } else if (teamId === defenseTeamId) {
+      runtime.pending.defensivePlay = play as DefensivePlay;
+    } else {
+      throw new Error("Team is not part of this match.");
+    }
 
-  maybeFillBotCalls(entry);
+    maybeFillBotCalls(runtime);
 
-  if (!entry.pending.offensivePlay || !entry.pending.defensivePlay) {
-    return { resolved: false, state: entry.state };
-  }
+    if (!runtime.pending.offensivePlay || !runtime.pending.defensivePlay) {
+      await tx.update(matches).set({ liveState: runtime }).where(eq(matches.id, matchId));
+      return { resolved: false, state: runtime.state };
+    }
 
-  const offenseProfile = entry.profiles.get(offenseTeamId)!.offense;
-  const defenseProfile = entry.profiles.get(defenseTeamId)!.defense;
+    const [offenseProfile, defenseProfile] = await Promise.all([
+      loadTeamProfile(offenseTeamId),
+      loadTeamProfile(defenseTeamId),
+    ]);
 
-  const playResult = resolvePlay({
-    offensivePlay: entry.pending.offensivePlay,
-    defensivePlay: entry.pending.defensivePlay,
-    offense: offenseProfile,
-    defense: defenseProfile,
+    const playResult = resolvePlay({
+      offensivePlay: runtime.pending.offensivePlay,
+      defensivePlay: runtime.pending.defensivePlay,
+      offense: offenseProfile.offense,
+      defense: defenseProfile.defense,
+    });
+
+    runtime.state = applyPlayToGame(runtime.state, playResult);
+    runtime.pending = {};
+
+    const gameOver = isGameOver(runtime.state);
+
+    await tx
+      .update(matches)
+      .set(
+        gameOver
+          ? {
+              liveState: runtime,
+              status: "completed",
+              homeScore: runtime.state.homeScore,
+              awayScore: runtime.state.awayScore,
+              completedAt: new Date(),
+            }
+          : { liveState: runtime },
+      )
+      .where(eq(matches.id, matchId));
+
+    return { resolved: true, state: runtime.state, playResult, gameOver };
   });
-
-  entry.state = applyPlayToGame(entry.state, playResult);
-  entry.pending = {};
-
-  const gameOver = isGameOver(entry.state);
-  return { resolved: true, state: entry.state, playResult, gameOver };
 }

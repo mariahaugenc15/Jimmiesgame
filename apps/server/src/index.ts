@@ -1,4 +1,3 @@
-import http from "node:http";
 import cors from "cors";
 import express from "express";
 // Patches Express 4's router so a rejected promise inside an async route
@@ -6,7 +5,6 @@ import express from "express";
 // hanging forever with no response (Express 4 doesn't do this on its own -
 // fixed natively in Express 5, but this app is still on 4).
 import "express-async-errors";
-import { Server } from "socket.io";
 import { env } from "./env.js";
 import { authRouter } from "./auth/routes.js";
 import { draftRouter } from "./draft/routes.js";
@@ -19,7 +17,6 @@ import { leaguesRouter } from "./routes/leagues.js";
 import { adminRouter } from "./routes/admin.js";
 import { setupRouter } from "./routes/setup.js";
 import { debugEnvRouter } from "./routes/debugEnv.js";
-import { registerSocketHandlers } from "./realtime/socket.js";
 import { runWeeklySync, scheduleWeeklyRatingSync } from "./jobs/weeklyRatingSync.js";
 
 const app = express();
@@ -45,11 +42,7 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
   res.status(500).json({ error: "Internal server error." });
 });
 
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, { cors: { origin: env.corsOrigin } });
-registerSocketHandlers(io);
-
-httpServer.listen(env.port, () => {
+app.listen(env.port, () => {
   console.log(`Server listening on http://localhost:${env.port}`);
 });
 

@@ -1,3 +1,5 @@
+import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@lockedin/shared";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 export class ApiError extends Error {
@@ -86,7 +88,13 @@ export const api = {
 
   createMatch: (homeTeamId: string, awayTeamId: string, week = 1) =>
     request<{ id: string }>("/api/matches", { method: "POST", body: JSON.stringify({ homeTeamId, awayTeamId, week }) }),
-  startMatch: (matchId: string) => request<unknown>(`/api/matches/${matchId}/start`, { method: "POST" }),
+  startMatch: (matchId: string) => request<GameState>(`/api/matches/${matchId}/start`, { method: "POST" }),
+  getMatchState: (matchId: string) => request<GameState>(`/api/matches/${matchId}/state`),
+  submitPlayCall: (matchId: string, teamId: string, play: OffensivePlay | DefensivePlay) =>
+    request<{ resolved: boolean; state: GameState; playResult?: PlayResult; gameOver?: boolean }>(
+      `/api/matches/${matchId}/playcall`,
+      { method: "POST", body: JSON.stringify({ teamId, play }) },
+    ),
 
   joinMatchmaking: (teamId: string) =>
     request<{ status: "waiting" | "matched"; queueSize?: number; match?: { id: string } }>("/api/matchmaking/join", {

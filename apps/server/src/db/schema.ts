@@ -124,6 +124,11 @@ export const matches = pgTable("matches", {
   homeScore: integer("home_score").notNull().default(0),
   awayScore: integer("away_score").notNull().default(0),
   replayLog: jsonb("replay_log").$type<unknown[]>(),
+  // Persists the live gameplay engine's runtime state (game clock, down,
+  // pending play calls, etc). Read/written on every play call instead of
+  // kept in an in-memory Map, since serverless requests can't rely on
+  // hitting the same running process twice in a row.
+  liveState: jsonb("live_state").$type<unknown>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });

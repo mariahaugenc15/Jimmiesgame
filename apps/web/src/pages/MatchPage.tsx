@@ -1,13 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@lockedin/shared";
-import { connectSocket, disconnectSocket } from "../lib/socket";
+import type { DefensivePlay, GameState, OffensivePlay } from "@lockedin/shared";
+import { ApiError, api } from "../lib/api";
 import { ScoreBoard } from "../components/ScoreBoard";
 import { FieldView } from "../components/FieldView";
 import { PlayCallPanel } from "../components/PlayCallPanel";
 import { ProbabilityBar } from "../components/ProbabilityBar";
 import { LockedInLogo } from "../components/LockedInLogo";
-import { api } from "../lib/api";
+
+// Vercel's hosting runs the server in short-lived, disconnected pieces
+// rather than one continuously-running process, so a WebSocket connection
+// (which needs the same process to stay reachable for the whole match)
+// doesn't work reliably there. Polling the current state over plain HTTP
+// works the same way regardless of how the server is hosted.
+const POLL_INTERVAL_MS = 1500;
 
 export function MatchPage() {
   const { matchId } = useParams<{ matchId: string }>();
@@ -15,31 +21,44 @@ export function MatchPage() {
   const teamId = searchParams.get("team");
 
   const [state, setState] = useState<GameState | null>(null);
-  const [lastResult, setLastResult] = useState<PlayResult | null>(null);
   const [selectedOffense, setSelectedOffense] = useState<OffensivePlay | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [waitingForResolution, setWaitingForResolution] = useState(false);
   const [teamNames, setTeamNames] = useState<{ home: string; away: string }>({ home: "Home", away: "Away" });
   const logRef = useRef<HTMLDivElement>(null);
+  const lastLogLengthRef = useRef(0);
 
   useEffect(() => {
     if (!matchId) return;
-    const socket = connectSocket();
-    socket.emit("match:join", { matchId });
-    socket.on("match:state", (s: GameState) => {
+    let cancelled = false;
+    let interval: ReturnType<typeof setInterval> | undefined;
+
+    function applyState(s: GameState) {
+      if (cancelled) return;
+      if (s.log.length !== lastLogLengthRef.current || s.phase === "final") {
+        lastLogLengthRef.current = s.log.length;
+        setWaitingForResolution(false);
+        setSelectedOffense(undefined);
+      }
       setState(s);
-      setWaitingForResolution(false);
-      setSelectedOffense(undefined);
-    });
-    socket.on("match:play-result", (r: PlayResult) => setLastResult(r));
-    socket.on("match:error", (e: { error: string }) => setError(e.error));
+      if (s.phase === "final" && interval) clearInterval(interval);
+    }
+
+    api
+      .getMatchState(matchId)
+      .then(applyState)
+      .catch((err) => setError(err instanceof ApiError ? err.message : "Couldn't load the match."));
+
+    interval = setInterval(() => {
+      api
+        .getMatchState(matchId)
+        .then(applyState)
+        .catch(() => {});
+    }, POLL_INTERVAL_MS);
 
     return () => {
-      socket.emit("match:leave", { matchId });
-      socket.off("match:state");
-      socket.off("match:play-result");
-      socket.off("match:error");
-      disconnectSocket();
+      cancelled = true;
+      if (interval) clearInterval(interval);
     };
   }, [matchId]);
 
@@ -54,15 +73,22 @@ export function MatchPage() {
       .catch(() => {});
   }, [state?.homeTeamId, state?.awayTeamId]);
 
-  function submitPlay(play: OffensivePlay | DefensivePlay) {
+  async function submitPlay(play: OffensivePlay | DefensivePlay) {
     if (!matchId || !teamId) return;
     setWaitingForResolution(true);
-    connectSocket().emit("match:playcall", { matchId, teamId, play }, (ack: { ok: boolean; error?: string }) => {
-      if (!ack.ok) {
-        setError(ack.error ?? "Play call failed.");
+    setError(null);
+    try {
+      const result = await api.submitPlayCall(matchId, teamId, play);
+      if (result.state.log.length !== lastLogLengthRef.current || result.state.phase === "final") {
+        lastLogLengthRef.current = result.state.log.length;
         setWaitingForResolution(false);
+        setSelectedOffense(undefined);
       }
-    });
+      setState(result.state);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Play call failed.");
+      setWaitingForResolution(false);
+    }
   }
 
   if (!matchId || !teamId) {
@@ -102,11 +128,11 @@ export function MatchPage() {
         selectedOffensivePlay={selectedOffense}
       />
 
-      {lastResult && (
+      {state.lastPlay && (
         <div className="space-y-2 rounded-lg bg-slate-900 p-3">
-          <ProbabilityBar label="Success probability" value={lastResult.successProbability} color="#38bdf8" />
-          {lastResult.breakawayChance > 0 && (
-            <ProbabilityBar label="Breakaway chance" value={lastResult.breakawayChance} color="#f97316" />
+          <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} color="#38bdf8" />
+          {state.lastPlay.breakawayChance > 0 && (
+            <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
           )}
         </div>
       )}

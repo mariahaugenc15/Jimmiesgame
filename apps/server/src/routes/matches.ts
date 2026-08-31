@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import type { DefensivePlay, OffensivePlay } from "@lockedin/shared";
 import { db } from "../db/client.js";
 import { matches, teams } from "../db/schema.js";
-import { getMatchState, startMatch } from "../gameplay/matchRuntime.js";
+import { getMatchState, startMatch, submitPlayCall } from "../gameplay/matchRuntime.js";
 import type { AuthedRequest } from "../middleware/requireAuth.js";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { broadcastMatchState } from "../realtime/io.js";
 
 export const matchesRouter = Router();
 
@@ -44,12 +44,36 @@ matchesRouter.post("/:id/start", requireAuth, async (req: AuthedRequest, res) =>
 
   const state = await startMatch(match.id, match.homeTeamId, match.awayTeamId, botTeamIds);
   await db.update(matches).set({ status: "in_progress" }).where(eq(matches.id, match.id));
-  broadcastMatchState(match.id, state);
   res.json(state);
 });
 
 matchesRouter.get("/:id/state", requireAuth, async (req, res) => {
-  const state = getMatchState(req.params.id);
+  const state = await getMatchState(req.params.id);
   if (!state) return res.status(404).json({ error: "Match not started or already finished." });
   res.json(state);
+});
+
+const playCallSchema = z.object({
+  teamId: z.string().uuid(),
+  play: z.string(),
+});
+
+// Clients poll GET /:id/state instead of receiving a push, so this returns
+// the same shape a socket "match:state" event used to - the caller applies
+// it the same way whether it came from this response or the next poll.
+matchesRouter.post("/:id/playcall", requireAuth, async (req, res) => {
+  const parsed = playCallSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  try {
+    const result = await submitPlayCall(
+      req.params.id,
+      parsed.data.teamId,
+      parsed.data.play as OffensivePlay | DefensivePlay,
+    );
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error resolving playcall.";
+    res.status(409).json({ error: message });
+  }
 });
