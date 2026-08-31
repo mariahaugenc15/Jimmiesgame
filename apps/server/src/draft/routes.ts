@@ -128,7 +128,7 @@ draftRouter.post("/swap", requireAuth, async (req: AuthedRequest, res) => {
   if (team.lockedAt) return res.status(409).json({ error: "Roster is locked; no changes allowed." });
 
   const existingSlot = await db.query.rosterSlots.findFirst({
-    where: (rs, { and, eq: eqOp }) => and(eqOp(rs.teamId, teamId), eqOp(rs.nflPlayerId, dropPlayerId)),
+    where: and(eq(rosterSlots.teamId, teamId), eq(rosterSlots.nflPlayerId, dropPlayerId)),
   });
   if (!existingSlot) return res.status(404).json({ error: "Player not on this roster." });
 
@@ -140,7 +140,7 @@ draftRouter.post("/swap", requireAuth, async (req: AuthedRequest, res) => {
   }
 
   const alreadyRostered = await db.query.rosterSlots.findFirst({
-    where: (rs, { and, eq: eqOp }) => and(eqOp(rs.teamId, teamId), eqOp(rs.nflPlayerId, addPlayerId)),
+    where: and(eq(rosterSlots.teamId, teamId), eq(rosterSlots.nflPlayerId, addPlayerId)),
   });
   if (alreadyRostered) return res.status(409).json({ error: "Replacement player is already on this roster." });
 

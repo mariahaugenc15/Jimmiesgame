@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { leagueMembers, leagues, matches, teams } from "../db/schema.js";
@@ -43,7 +43,7 @@ leaguesRouter.get("/:id/standings", requireAuth, async (req, res) => {
     teamIds.map(async (teamId) => {
       const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
       const played = await db.query.matches.findMany({
-        where: (m, { or }) => and(eq(m.status, "completed"), or(eq(m.homeTeamId, teamId), eq(m.awayTeamId, teamId))),
+        where: and(eq(matches.status, "completed"), or(eq(matches.homeTeamId, teamId), eq(matches.awayTeamId, teamId))),
       });
       let wins = 0;
       let losses = 0;

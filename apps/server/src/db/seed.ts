@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { statsProvider } from "../stats-provider/index.js";
 import { db, pool } from "./client.js";
 import { nflPlayers, seasons } from "./schema.js";
@@ -21,7 +22,7 @@ async function main() {
   console.log(`Seeded ${players.length} NFL players.`);
 
   const year = new Date().getFullYear();
-  const existing = await db.query.seasons.findFirst({ where: (s, { eq }) => eq(s.year, year) });
+  const existing = await db.query.seasons.findFirst({ where: eq(seasons.year, year) });
   if (!existing) {
     await db.insert(seasons).values({
       year,
