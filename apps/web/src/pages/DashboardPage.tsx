@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../lib/api";
-import { LockButton } from "../components/LockButton";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
-import { buttonPrimary, POSITION_STYLES } from "../lib/ui";
+import { IconPicker } from "../components/IconPicker";
+import { TeamIconBadge } from "../components/TeamIconBadge";
+import { buttonPrimary, buttonSecondary, POSITION_STYLES } from "../lib/ui";
 import { DashboardIcon } from "../components/navIcons";
 
 interface TeamRow {
@@ -13,6 +14,9 @@ interface TeamRow {
   seasonId: string;
   lockedAt: string | null;
 }
+
+/** What to do once the player confirms an icon in the pre-match picker. */
+type PendingMatchAction = { type: "bot"; botTeamId: string } | { type: "matchmaking" };
 
 interface RosterEntry {
   nflPlayerId: string;
@@ -52,6 +56,8 @@ export function DashboardPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [roster, setRoster] = useState<RosterEntry[] | null>(null);
+  const [teamIcon, setTeamIcon] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingMatchAction | null>(null);
 
   const myTeam = teams.find((t) => !t.name.startsWith("Bot Squad"));
   const botTeams = teams.filter((t) => t.name.startsWith("Bot Squad"));
@@ -63,9 +69,12 @@ export function DashboardPage() {
     setTeams(teamList);
     const mine = teamList.find((t) => !t.name.startsWith("Bot Squad"));
     if (mine) {
-      setRoster(await api.roster(mine.id));
+      const [rosterList, team] = await Promise.all([api.roster(mine.id), api.getTeam(mine.id)]);
+      setRoster(rosterList);
+      setTeamIcon(team.icon);
     } else {
       setRoster(null);
+      setTeamIcon(null);
     }
   }
 
@@ -132,6 +141,22 @@ export function DashboardPage() {
     }
   }
 
+  /** The icon picker's confirm step: save the chosen icon, then carry out
+   *  whichever match action the player originally clicked. Left open on
+   *  failure (via the thrown error) so they can retry without re-picking. */
+  async function confirmIconAndPlay(icon: string) {
+    if (!myTeam || !pendingAction) return;
+    await api.setTeamIcon(myTeam.id, icon);
+    setTeamIcon(icon);
+    const action = pendingAction;
+    if (action.type === "bot") {
+      await playVsBot(action.botTeamId); // throws on failure; navigates away on success
+      return;
+    }
+    await joinMatchmaking();
+    setPendingAction(null);
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 pb-24 sm:p-6">
       <div className="flex items-center gap-2.5">
@@ -180,11 +205,14 @@ export function DashboardPage() {
           <div className="space-y-4 lg:col-span-2">
             <Card className="p-5">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-bold text-white">{myTeam.name}</h2>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {rosterCount} players rostered{myTeam.lockedAt && " · Locked for the season"}
-                  </p>
+                <div className="flex items-center gap-2.5">
+                  <TeamIconBadge icon={teamIcon} size={30} />
+                  <div>
+                    <h2 className="font-bold text-white">{myTeam.name}</h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {rosterCount} players rostered{myTeam.lockedAt && " · Locked for the season"}
+                    </p>
+                  </div>
                 </div>
                 {myTeam.lockedAt && (
                   <span className="rounded-full border border-locked-500/40 bg-locked-500/10 px-2.5 py-1 text-[11px] font-semibold text-locked-300">
@@ -199,7 +227,7 @@ export function DashboardPage() {
 
             <Card elevated className="p-6">
               <SectionHeader title="Quick Match" subtitle="Jump into a ranked matchup against another real team." />
-              <button onClick={joinMatchmaking} disabled={busy} className={`${buttonPrimary} w-full text-base`}>
+              <button onClick={() => setPendingAction({ type: "matchmaking" })} disabled={busy} className={`${buttonPrimary} w-full text-base`}>
                 Find a global opponent
               </button>
             </Card>
@@ -214,13 +242,28 @@ export function DashboardPage() {
                   className="flex items-center justify-between gap-2 rounded-lg border border-surface-border bg-surface-page px-3 py-2 transition-colors hover:border-primary-500/30"
                 >
                   <span className="text-sm text-slate-300">{bot.name}</span>
-                  <LockButton label="Lock In Lineup" onConfirm={() => playVsBot(bot.id)} className="px-3 py-1.5 text-xs" />
+                  <button
+                    onClick={() => setPendingAction({ type: "bot", botTeamId: bot.id })}
+                    disabled={busy}
+                    className={`${buttonSecondary} px-3 py-1.5 text-xs`}
+                  >
+                    Play
+                  </button>
                 </div>
               ))}
               {botTeams.length === 0 && <p className="text-sm text-slate-500">No bot opponents yet.</p>}
             </div>
           </Card>
         </div>
+      )}
+
+      {pendingAction && myTeam && (
+        <IconPicker
+          teamName={myTeam.name}
+          currentIcon={teamIcon}
+          onConfirm={confirmIconAndPlay}
+          onCancel={() => setPendingAction(null)}
+        />
       )}
     </div>
   );

@@ -28,6 +28,7 @@ export function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [waitingForResolution, setWaitingForResolution] = useState(false);
   const [teamNames, setTeamNames] = useState<{ home: string; away: string }>({ home: "Home", away: "Away" });
+  const [teamIcons, setTeamIcons] = useState<{ home: string | null; away: string | null }>({ home: null, away: null });
   const [playerById, setPlayerById] = useState<Map<string, InsightPlayer>>(new Map());
   const [myRoster, setMyRoster] = useState<InsightPlayer[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
@@ -74,7 +75,10 @@ export function MatchPage() {
   useEffect(() => {
     if (!state) return;
     Promise.all([api.getTeam(state.homeTeamId), api.getTeam(state.awayTeamId)])
-      .then(([home, away]) => setTeamNames({ home: home.name, away: away.name }))
+      .then(([home, away]) => {
+        setTeamNames({ home: home.name, away: away.name });
+        setTeamIcons({ home: home.icon, away: away.icon });
+      })
       .catch(() => {});
   }, [state?.homeTeamId, state?.awayTeamId]);
 
@@ -146,12 +150,20 @@ export function MatchPage() {
   const featuredPlayer = state.lastPlay
     ? (playerById.get(state.lastPlay.ballCarrierId ?? state.lastPlay.targetId ?? "") ?? null)
     : null;
+  const offenseIcon =
+    state.possessionTeamId === state.homeTeamId
+      ? teamIcons.home
+      : state.possessionTeamId === state.awayTeamId
+        ? teamIcons.away
+        : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 pb-24 sm:p-6">
       <ScoreBoard
         homeName={teamNames.home}
         awayName={teamNames.away}
+        homeIcon={teamIcons.home}
+        awayIcon={teamIcons.away}
         homeScore={state.homeScore}
         awayScore={state.awayScore}
         clock={state.clock}
@@ -172,6 +184,7 @@ export function MatchPage() {
         lastPlay={state.lastPlay}
         selectedOffensivePlay={selectedOffense}
         player={featuredPlayer}
+        offenseIcon={offenseIcon}
       />
 
       {state.lastPlay && (

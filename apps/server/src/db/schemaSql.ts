@@ -132,8 +132,15 @@ CREATE TABLE IF NOT EXISTS "teams" (
 	"name" text NOT NULL,
 	"season_id" uuid NOT NULL,
 	"locked_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"icon" text
 );
+
+-- The teams table above already existed in production before icon was
+-- added, so CREATE TABLE IF NOT EXISTS alone won't add the column to an
+-- already-live database - this upgrades it the same way a real migration
+-- would, and is a no-op once the column exists.
+ALTER TABLE "teams" ADD COLUMN IF NOT EXISTS "icon" text;
 
 CREATE TABLE IF NOT EXISTS "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

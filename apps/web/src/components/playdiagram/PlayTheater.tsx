@@ -11,6 +11,8 @@ interface PlayTheaterProps {
   lastPlay: PlayResult | null;
   selectedOffensivePlay?: OffensivePlay;
   player: InsightPlayer | null;
+  /** The offense's chosen team icon (shape keyword or emoji) - shown on the ball-carrier/lead formation dot instead of the default circle. */
+  offenseIcon?: string | null;
 }
 
 /** Formation spread widens for pass concepts, tightens for runs — a purely diagrammatic cue, not simulated player movement. */
@@ -32,7 +34,15 @@ function downLabel(down: number): string {
   return down === 1 ? "1st" : down === 2 ? "2nd" : down === 3 ? "3rd" : "4th";
 }
 
-function PreSnapField({ down, selectedOffensivePlay }: { down: DownState; selectedOffensivePlay?: OffensivePlay }) {
+function PreSnapField({
+  down,
+  selectedOffensivePlay,
+  offenseIcon,
+}: {
+  down: DownState;
+  selectedOffensivePlay?: OffensivePlay;
+  offenseIcon?: string | null;
+}) {
   const offsets = formationOffsets(selectedOffensivePlay);
   const centerY = FIELD_H / 2;
 
@@ -49,7 +59,7 @@ function PreSnapField({ down, selectedOffensivePlay }: { down: DownState; select
 
         {offsets.map((dy, i) => (
           <g key={i} transform={`translate(${LOS_X - (i === 2 ? 14 : 6)},${centerY + dy})`}>
-            <DoodleFigure variant="offense" size={i === 2 ? 6.5 : 5} />
+            <DoodleFigure variant="offense" size={i === 2 ? 6.5 : 5} icon={i === 2 ? offenseIcon : undefined} />
           </g>
         ))}
       </svg>
@@ -68,7 +78,7 @@ function PreSnapField({ down, selectedOffensivePlay }: { down: DownState; select
  * with a key tied to the resolved-play count (see MatchPage) so the
  * animation and callout replay fresh for every new play.
  */
-export function PlayTheater({ down, lastPlay, selectedOffensivePlay, player }: PlayTheaterProps) {
+export function PlayTheater({ down, lastPlay, selectedOffensivePlay, player, offenseIcon }: PlayTheaterProps) {
   if (!down) {
     return (
       <div className="flex h-72 items-center justify-center rounded-xl bg-pitch text-slate-300">
@@ -78,12 +88,12 @@ export function PlayTheater({ down, lastPlay, selectedOffensivePlay, player }: P
   }
 
   if (!lastPlay) {
-    return <PreSnapField down={down} selectedOffensivePlay={selectedOffensivePlay} />;
+    return <PreSnapField down={down} selectedOffensivePlay={selectedOffensivePlay} offenseIcon={offenseIcon} />;
   }
 
   return (
     <div className="relative">
-      <PlayDiagram play={lastPlay.offensivePlay} result={lastPlay} player={player} />
+      <PlayDiagram play={lastPlay.offensivePlay} result={lastPlay} player={player} icon={offenseIcon} />
       <OutcomeCallout result={lastPlay} />
     </div>
   );

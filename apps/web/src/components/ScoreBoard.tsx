@@ -1,8 +1,11 @@
 import type { ClockState } from "@lockedin/shared";
+import { TeamIconBadge } from "./TeamIconBadge";
 
 interface ScoreBoardProps {
   homeName: string;
   awayName: string;
+  homeIcon?: string | null;
+  awayIcon?: string | null;
   homeScore: number;
   awayScore: number;
   clock: ClockState;
@@ -30,12 +33,14 @@ function BallIcon({ className }: { className?: string }) {
 
 function TeamSide({
   name,
+  icon,
   score,
   accent,
   hasBall,
   align,
 }: {
   name: string;
+  icon?: string | null;
   score: number;
   accent: "primary" | "danger";
   hasBall: boolean;
@@ -44,6 +49,7 @@ function TeamSide({
   const color = accent === "primary" ? "text-primary-400" : "text-danger-400";
   return (
     <div className={`flex items-center gap-2 ${align === "right" ? "flex-row-reverse text-right" : "text-left"}`}>
+      <TeamIconBadge icon={icon} size={26} />
       <div>
         <p className={`flex items-center gap-1.5 text-xs uppercase tracking-wide ${color} ${align === "right" ? "flex-row-reverse justify-end" : ""}`}>
           {hasBall && <BallIcon className={color} />}
@@ -58,6 +64,8 @@ function TeamSide({
 export function ScoreBoard({
   homeName,
   awayName,
+  homeIcon,
+  awayIcon,
   homeScore,
   awayScore,
   clock,
@@ -69,6 +77,7 @@ export function ScoreBoard({
     <div className="flex items-center justify-between rounded-lg border border-surface-border bg-surface-card px-4 py-3">
       <TeamSide
         name={homeName}
+        icon={homeIcon}
         score={homeScore}
         accent={isHomeMine ? "primary" : "danger"}
         hasBall={phase !== "final" && possessionIsHome === true}
@@ -80,6 +89,7 @@ export function ScoreBoard({
       </div>
       <TeamSide
         name={awayName}
+        icon={awayIcon}
         score={awayScore}
         accent={isHomeMine ? "danger" : "primary"}
         hasBall={phase !== "final" && possessionIsHome === false}

@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { OffensivePlay, PlayResult } from "@lockedin/shared";
+import { isTeamIconShape, type OffensivePlay, type PlayResult } from "@lockedin/shared";
 import { DoodleFigure } from "./DoodleFigure";
 import { FieldBackground } from "./FieldBackground";
 import { DEFENDER_SPOTS, defenderPursuitPath, depthFractionForYards, FIELD_H, FIELD_W, routeEndPoint, routePath } from "./routes";
@@ -40,6 +40,8 @@ interface PlayDiagramProps {
   result: PlayResult;
   /** The real player the engine attributed this play to (ballCarrierId/targetId resolved via roster lookup) - names the doodle instead of leaving it anonymous. */
   player?: InsightPlayer | null;
+  /** The offense's chosen team icon (shape keyword or emoji) - replaces the default circle ball-carrier. */
+  icon?: string | null;
 }
 
 /**
@@ -50,12 +52,15 @@ interface PlayDiagramProps {
  * their name labels the doodle and the caption explains the outcome in
  * terms of their actual rating, not a generic line.
  */
-export function PlayDiagram({ play, result, player }: PlayDiagramProps) {
+export function PlayDiagram({ play, result, player, icon }: PlayDiagramProps) {
   const routeId = useId().replace(/:/g, "");
   const meta = outcomeMeta(result);
   const depth = depthFractionForYards(result.yards);
   const path = routePath(play, depth);
   const end = routeEndPoint(play, depth);
+  // An emoji glyph shouldn't tilt as it travels a curved route the way the
+  // directional tick on a geometric shape does - only rotate for shapes.
+  const iconIsEmoji = !!icon && !isTeamIconShape(icon);
 
   return (
     <div className="overflow-hidden rounded-xl bg-pitch p-3">
@@ -101,12 +106,12 @@ export function PlayDiagram({ play, result, player }: PlayDiagramProps) {
         />
 
         <g>
-          <DoodleFigure variant="offense" size={6} />
+          <DoodleFigure variant="offense" size={6} icon={icon} />
           <animateMotion
             dur="1.9s"
             begin="0.05s"
             fill="freeze"
-            rotate="auto"
+            rotate={iconIsEmoji ? "0" : "auto"}
             calcMode="spline"
             keyTimes="0;1"
             keySplines="0.3 0 0.2 1"

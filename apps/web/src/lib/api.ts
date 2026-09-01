@@ -61,7 +61,12 @@ export const api = {
   myTeams: () => request<{ id: string; name: string; seasonId: string; lockedAt: string | null }[]>("/api/teams/mine"),
   createTeam: (name: string, seasonId: string) =>
     request<{ id: string; name: string }>("/api/teams", { method: "POST", body: JSON.stringify({ name, seasonId }) }),
-  getTeam: (teamId: string) => request<{ id: string; name: string }>(`/api/teams/${teamId}`),
+  getTeam: (teamId: string) => request<{ id: string; name: string; icon: string | null }>(`/api/teams/${teamId}`),
+  setTeamIcon: (teamId: string, icon: string) =>
+    request<{ id: string; icon: string | null }>(`/api/teams/${teamId}/icon`, {
+      method: "POST",
+      body: JSON.stringify({ icon }),
+    }),
 
   runSoloDraft: (teamId: string, seasonId: string, botCount = 5) =>
     request<{ draftId: string; yourRoster: unknown[]; botTeamIds: string[] }>("/api/drafts/solo", {
