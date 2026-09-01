@@ -13,7 +13,10 @@ export default {
         // Surfaces: three navy steps for depth (page < card < elevated/hover),
         // instead of one flat slate-900 everywhere.
         surface: {
-          page: "#05070d",
+          // Deep pitch-green rather than flat black - the app-wide route
+          // backdrop lives on this, so it needs to read as "field at
+          // night," not an empty void with faint lines on it.
+          page: "#071a11",
           card: "#0d1424",
           raised: "#141d33",
           border: "#232e47",

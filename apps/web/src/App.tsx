@@ -10,6 +10,7 @@ import { MatchPage } from "./pages/MatchPage";
 import { LeaguesPage } from "./pages/LeaguesPage";
 import { BrandTestPage } from "./pages/BrandTestPage";
 import { LockedInLogo } from "./components/LockedInLogo";
+import { RouteBackdrop } from "./components/playdiagram/RouteBackdrop";
 
 function AppLoading() {
   return (
@@ -29,6 +30,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <div className="min-h-screen bg-surface-page text-slate-100">
+      <RouteBackdrop />
       <Nav />
       <Routes>
         <Route path="/login" element={<LoginPage />} />

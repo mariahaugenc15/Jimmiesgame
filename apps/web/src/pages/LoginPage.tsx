@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/api";
-import { RouteBackdrop } from "../components/playdiagram/RouteBackdrop";
 import { buttonPrimary } from "../lib/ui";
 
 export function LoginPage() {
@@ -28,8 +27,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-[80vh] items-center justify-center overflow-hidden px-4">
-      <RouteBackdrop />
+    <div className="relative flex min-h-[80vh] items-center justify-center px-4">
       <div className="relative w-full max-w-sm rounded-2xl border border-surface-border bg-surface-card p-6 shadow-raised">
         <h1 className="mb-4 text-xl font-bold text-primary-400">Log in</h1>
         <form onSubmit={onSubmit} className="space-y-3">

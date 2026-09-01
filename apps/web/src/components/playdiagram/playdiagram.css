@@ -41,6 +41,35 @@
   animation: play-diagram-td-pulse 900ms ease-in-out infinite;
 }
 
+/* Ambient, looping variant for the persistent app-wide backdrop - draws in,
+   holds, fades, redraws. Distinct from .play-diagram-route (a one-shot
+   "this play just happened" animation that freezes at the end). */
+@keyframes route-backdrop-cycle {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  50% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  85% {
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+}
+.route-backdrop-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: route-backdrop-cycle 9s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .play-diagram-route {
     animation: none;
@@ -54,5 +83,10 @@
   .play-diagram-td-pulse {
     animation: none;
     opacity: 0.15;
+  }
+  .route-backdrop-line {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 0.5;
   }
 }
