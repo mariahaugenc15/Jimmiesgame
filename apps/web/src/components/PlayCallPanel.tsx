@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { DefensivePlay, OffensivePlay } from "@lockedin/shared";
+import { defensePlayHint, defenseUnitInsight, offensePlayHint, type InsightPlayer } from "../lib/playInsights";
 
 const OFFENSIVE_PLAYS: { play: OffensivePlay; label: string }[] = [
   { play: "inside_run", label: "Inside Run" },
@@ -23,15 +24,20 @@ interface PlayCallPanelProps {
   onSelectOffense?: (play: OffensivePlay) => void;
   onSelectDefense?: (play: DefensivePlay) => void;
   disabled?: boolean;
+  /** Your own team's roster (with ratings) - drives the per-play insight hints. Omit to hide hints. */
+  roster?: InsightPlayer[];
 }
 
 /**
  * Madden-style playcalling: each play gets a number-key hotkey (1-6 on
  * offense, 1-5 on defense) shown as an on-screen badge, in addition to
- * being clickable/tappable — keyboard on desktop, touch on mobile.
+ * being clickable/tappable — keyboard on desktop, touch on mobile. When a
+ * roster is provided, each button also shows a one-line insight grounded in
+ * your actual personnel ratings (never the opponent's - that's hidden info).
  */
-export function PlayCallPanel({ mode, onSelectOffense, onSelectDefense, disabled }: PlayCallPanelProps) {
+export function PlayCallPanel({ mode, onSelectOffense, onSelectDefense, disabled, roster }: PlayCallPanelProps) {
   const options = mode === "waiting" ? [] : mode === "offense" ? OFFENSIVE_PLAYS : DEFENSIVE_PLAYS;
+  const defenseInsight = roster ? defenseUnitInsight(roster) : null;
 
   useEffect(() => {
     if (mode === "waiting" || disabled) return;
@@ -66,19 +72,31 @@ export function PlayCallPanel({ mode, onSelectOffense, onSelectDefense, disabled
         </span>
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {options.map(({ play, label }, i) => (
-          <button
-            key={play}
-            disabled={disabled}
-            onClick={() => (mode === "offense" ? onSelectOffense?.(play as OffensivePlay) : onSelectDefense?.(play as DefensivePlay))}
-            className="flex items-center gap-2 rounded-md border border-surface-border bg-surface-raised px-3 py-2 text-sm font-medium text-slate-100 transition-all hover:border-primary-500/40 hover:bg-primary-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <kbd className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-page font-mono text-xs text-primary-400">
-              {i + 1}
-            </kbd>
-            {label}
-          </button>
-        ))}
+        {options.map(({ play, label }, i) => {
+          const hint = roster
+            ? mode === "offense"
+              ? offensePlayHint(play as OffensivePlay, roster)
+              : defensePlayHint(play as DefensivePlay, defenseInsight)
+            : null;
+          return (
+            <button
+              key={play}
+              disabled={disabled}
+              onClick={() =>
+                mode === "offense" ? onSelectOffense?.(play as OffensivePlay) : onSelectDefense?.(play as DefensivePlay)
+              }
+              className="flex flex-col items-start gap-1 rounded-md border border-surface-border bg-surface-raised px-3 py-2 text-left text-sm font-medium text-slate-100 transition-all hover:border-primary-500/40 hover:bg-primary-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="flex items-center gap-2">
+                <kbd className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface-page font-mono text-xs text-primary-400">
+                  {i + 1}
+                </kbd>
+                {label}
+              </span>
+              {hint && <span className="pl-7 text-[11px] font-normal leading-tight text-slate-400">{hint}</span>}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

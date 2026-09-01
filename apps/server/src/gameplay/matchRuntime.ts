@@ -8,7 +8,7 @@ import { statsProvider } from "../stats-provider/index.js";
 import { applyPlayToGame, createInitialGameState, isGameOver, resolvePlay, startFirstDrive } from "./engine.js";
 import type { DefenseProfile, OffenseProfile } from "./engine.js";
 import { botChooseDefensivePlay, botChooseOffensivePlay } from "./botAI.js";
-import { buildDefenseProfile, buildOffenseProfile, type RosteredPlayer } from "./teamProfile.js";
+import { buildDefenseProfile, buildOffenseProfile, pickFeaturedPlayerId, type RosteredPlayer } from "./teamProfile.js";
 
 interface PendingCalls {
   offensivePlay?: OffensivePlay;
@@ -30,7 +30,9 @@ interface PersistedRuntime {
   pending: PendingCalls;
 }
 
-async function loadTeamProfile(teamId: string): Promise<{ offense: OffenseProfile; defense: DefenseProfile }> {
+async function loadTeamProfile(
+  teamId: string,
+): Promise<{ offense: OffenseProfile; defense: DefenseProfile; rostered: RosteredPlayer[] }> {
   const slots = await db.query.rosterSlots.findMany({ where: eq(rosterSlots.teamId, teamId) });
   const players = await db.query.nflPlayers.findMany();
   const playerById = new Map(players.map((p) => [p.id, p]));
@@ -57,7 +59,7 @@ async function loadTeamProfile(teamId: string): Promise<{ offense: OffenseProfil
     };
   });
 
-  return { offense: buildOffenseProfile(rostered), defense: buildDefenseProfile(rostered) };
+  return { offense: buildOffenseProfile(rostered), defense: buildDefenseProfile(rostered), rostered };
 }
 
 export async function startMatch(
@@ -148,11 +150,15 @@ export async function submitPlayCall(
       loadTeamProfile(defenseTeamId),
     ]);
 
+    const featuredPlayerId = pickFeaturedPlayerId(runtime.pending.offensivePlay, offenseProfile.rostered);
+
     const playResult = resolvePlay({
       offensivePlay: runtime.pending.offensivePlay,
       defensivePlay: runtime.pending.defensivePlay,
       offense: offenseProfile.offense,
       defense: defenseProfile.defense,
+      ballCarrierId: featuredPlayerId,
+      targetId: featuredPlayerId,
     });
 
     runtime.state = applyPlayToGame(runtime.state, playResult);

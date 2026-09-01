@@ -1,4 +1,4 @@
-import type { DefensivePlay, GameState, OffensivePlay, PlayResult } from "@lockedin/shared";
+import type { DefensivePlay, GameState, OffensivePlay, PlayerRating, PlayResult } from "@lockedin/shared";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
@@ -82,7 +82,7 @@ export const api = {
       body: JSON.stringify({ teamId, dropPlayerId, addPlayerId }),
     }),
 
-  players: () => request<{ id: string; name: string; position: string; realNflTeam: string; rating: { overall: number } | null }[]>(
+  players: () => request<{ id: string; name: string; position: string; realNflTeam: string; rating: PlayerRating | null }[]>(
     "/api/players",
   ),
 

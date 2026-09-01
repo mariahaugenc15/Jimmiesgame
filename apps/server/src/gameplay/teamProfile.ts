@@ -1,4 +1,4 @@
-import type { PlayerRating, Position } from "@lockedin/shared";
+import type { OffensivePlay, PlayerRating, Position } from "@lockedin/shared";
 import type { DefenseProfile, OffenseProfile } from "./engine.js";
 
 export interface RosteredPlayer {
@@ -38,6 +38,24 @@ export function buildOffenseProfile(players: RosteredPlayer[]): OffenseProfile {
     wrSpeed: bestByPosition(players, ["WR", "TE"], "speed"),
     olPower: Math.round(avgOverall),
   };
+}
+
+const RUN_PLAYS: OffensivePlay[] = ["inside_run", "outside_run", "play_action"];
+
+/**
+ * The specific rostered player whose rating actually drives this playcall in
+ * resolvePlay() - the RB for runs (rbPower/rbSpeed), the best WR/TE for
+ * passes (wrCatching/wrSpeed) as the target/receiver. Lets the client
+ * attribute a resolved play to a real name instead of an anonymous dot.
+ */
+export function pickFeaturedPlayerId(play: OffensivePlay, players: RosteredPlayer[]): string | undefined {
+  const isRun = RUN_PLAYS.includes(play);
+  const positions: Position[] = isRun ? ["RB"] : ["WR", "TE"];
+  const key: keyof PlayerRating = isRun ? "power" : "catching";
+  const candidates = players.filter((p) => positions.includes(p.position) && p.rating);
+  if (candidates.length === 0) return undefined;
+  return candidates.reduce((best, p) => ((p.rating![key] as number) > (best.rating![key] as number) ? p : best))
+    .nflPlayerId;
 }
 
 export function buildDefenseProfile(players: RosteredPlayer[]): DefenseProfile {

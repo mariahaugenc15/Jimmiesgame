@@ -1,7 +1,8 @@
 import { useId } from "react";
 import type { OffensivePlay, PlayResult } from "@lockedin/shared";
 import { DoodleFigure } from "./DoodleFigure";
-import { depthFractionForYards, FIELD_H, FIELD_W, LOS_X, routePath } from "./routes";
+import { depthFractionForYards, FIELD_H, FIELD_W, LOS_X, routeEndPoint, routePath } from "./routes";
+import { explainOutcome, shortenName, type InsightPlayer } from "../../lib/playInsights";
 import "./playdiagram.css";
 
 interface OutcomeMeta {
@@ -40,19 +41,24 @@ const DEFENDER_SPOTS: [number, number][] = [
 interface PlayDiagramProps {
   play: OffensivePlay;
   result: PlayResult;
+  /** The real player the engine attributed this play to (ballCarrierId/targetId resolved via roster lookup) - names the doodle instead of leaving it anonymous. */
+  player?: InsightPlayer | null;
 }
 
 /**
  * The coach's-whiteboard resolution for one play: a route line draws itself,
  * a doodle ball-carrier travels it, and an outcome badge lands at the end.
  * Built from the same small route/figure vocabulary regardless of play type
- * or outcome - see routes.ts and DoodleFigure.
+ * or outcome - see routes.ts and DoodleFigure. When a player is supplied,
+ * their name labels the doodle and the caption explains the outcome in
+ * terms of their actual rating, not a generic line.
  */
-export function PlayDiagram({ play, result }: PlayDiagramProps) {
+export function PlayDiagram({ play, result, player }: PlayDiagramProps) {
   const routeId = useId().replace(/:/g, "");
   const meta = outcomeMeta(result);
   const depth = depthFractionForYards(result.yards);
   const path = routePath(play, depth);
+  const end = routeEndPoint(play, depth);
 
   return (
     <div className="overflow-hidden rounded-xl bg-pitch p-3">
@@ -90,12 +96,26 @@ export function PlayDiagram({ play, result }: PlayDiagramProps) {
           </animateMotion>
         </g>
 
+        {player && (
+          <text
+            x={end.x}
+            y={end.y - 12}
+            textAnchor="middle"
+            className="play-diagram-badge"
+            fill="#E2E8F0"
+            fontSize={9}
+            fontWeight={700}
+          >
+            {shortenName(player.name)}
+          </text>
+        )}
+
         {meta.celebrate && (
           <circle cx={FIELD_W - 22} cy={FIELD_H / 2} r={9} fill="none" stroke="#10D688" strokeWidth={2} className="play-diagram-td-pulse" />
         )}
       </svg>
 
-      <div className="mt-2 flex items-center justify-between">
+      <div className="mt-2 flex items-center justify-between gap-2">
         <span className="text-xs text-slate-400">
           {play
             .split("_")
@@ -106,6 +126,8 @@ export function PlayDiagram({ play, result }: PlayDiagramProps) {
           {meta.text}
         </span>
       </div>
+
+      <p className="play-diagram-badge mt-1.5 text-xs text-slate-400">{explainOutcome(result, player ?? null)}</p>
     </div>
   );
 }

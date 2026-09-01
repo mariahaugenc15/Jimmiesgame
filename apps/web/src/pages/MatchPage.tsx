@@ -9,6 +9,7 @@ import { ProbabilityBar } from "../components/ProbabilityBar";
 import { LockedInLogo } from "../components/LockedInLogo";
 import { PlayDiagram } from "../components/playdiagram/PlayDiagram";
 import { HowToPlay } from "../components/HowToPlay";
+import type { InsightPlayer } from "../lib/playInsights";
 
 // Vercel's hosting runs the server in short-lived, disconnected pieces
 // rather than one continuously-running process, so a WebSocket connection
@@ -27,6 +28,8 @@ export function MatchPage() {
   const [error, setError] = useState<string | null>(null);
   const [waitingForResolution, setWaitingForResolution] = useState(false);
   const [teamNames, setTeamNames] = useState<{ home: string; away: string }>({ home: "Home", away: "Away" });
+  const [playerById, setPlayerById] = useState<Map<string, InsightPlayer>>(new Map());
+  const [myRoster, setMyRoster] = useState<InsightPlayer[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
   const lastLogLengthRef = useRef(0);
 
@@ -75,6 +78,34 @@ export function MatchPage() {
       .catch(() => {});
   }, [state?.homeTeamId, state?.awayTeamId]);
 
+  // Both rosters (with real ratings) drive the play-diagram's player labels
+  // and the play-call panel's insight hints. Fetched once per match, not on
+  // every poll - team/home/away ids never change once a match has started.
+  useEffect(() => {
+    if (!state) return;
+    Promise.all([api.players(), api.roster(state.homeTeamId), api.roster(state.awayTeamId)])
+      .then(([players, homeRoster, awayRoster]) => {
+        const ratingById = new Map(players.map((p) => [p.id, p.rating]));
+        const toInsightPlayers = (roster: typeof homeRoster): InsightPlayer[] =>
+          roster
+            .filter((entry) => entry.player)
+            .map((entry) => ({
+              id: entry.nflPlayerId,
+              name: entry.player!.name,
+              position: entry.player!.position,
+              rating: ratingById.get(entry.nflPlayerId) ?? null,
+            }));
+
+        const home = toInsightPlayers(homeRoster);
+        const away = toInsightPlayers(awayRoster);
+        const merged = new Map<string, InsightPlayer>();
+        for (const p of [...home, ...away]) merged.set(p.id, p);
+        setPlayerById(merged);
+        setMyRoster(teamId === state.homeTeamId ? home : away);
+      })
+      .catch(() => {});
+  }, [state?.homeTeamId, state?.awayTeamId, teamId]);
+
   async function submitPlay(play: OffensivePlay | DefensivePlay) {
     if (!matchId || !teamId) return;
     setWaitingForResolution(true);
@@ -111,9 +142,12 @@ export function MatchPage() {
   const isDefense = !isOffense && (teamId === state.homeTeamId || teamId === state.awayTeamId);
   const mode: "offense" | "defense" | "waiting" =
     state.phase === "final" ? "waiting" : isOffense ? "offense" : isDefense ? "defense" : "waiting";
+  const featuredPlayer = state.lastPlay
+    ? (playerById.get(state.lastPlay.ballCarrierId ?? state.lastPlay.targetId ?? "") ?? null)
+    : null;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 pb-20">
+    <div className="mx-auto max-w-6xl space-y-4 p-4 pb-24 sm:p-6">
       <ScoreBoard
         homeName={teamNames.home}
         awayName={teamNames.away}
@@ -125,24 +159,37 @@ export function MatchPage() {
 
       {state.phase !== "final" && <HowToPlay />}
 
-      <FieldView
-        down={state.down}
-        lastPlay={state.lastPlay}
-        possessionIsHome={possessionIsHome}
-        selectedOffensivePlay={selectedOffense}
-      />
+      {/* Side by side on desktop so the live drive state and the last play's
+          result are both visible without scrolling; stacks on mobile. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <FieldView
+          down={state.down}
+          lastPlay={state.lastPlay}
+          possessionIsHome={possessionIsHome}
+          selectedOffensivePlay={selectedOffense}
+        />
 
-      {state.lastPlay && (
-        <div className="space-y-3">
-          <PlayDiagram key={state.log.length} play={state.lastPlay.offensivePlay} result={state.lastPlay} />
-          <div className="space-y-2 rounded-lg bg-surface-card p-3">
-            <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} color="#38bdf8" />
-            {state.lastPlay.breakawayChance > 0 && (
-              <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
-            )}
+        {state.lastPlay ? (
+          <div className="space-y-3">
+            <PlayDiagram
+              key={state.log.length}
+              play={state.lastPlay.offensivePlay}
+              result={state.lastPlay}
+              player={featuredPlayer}
+            />
+            <div className="space-y-2 rounded-lg border border-surface-border bg-surface-card p-3">
+              <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} color="#38bdf8" />
+              {state.lastPlay.breakawayChance > 0 && (
+                <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex items-center justify-center rounded-xl border border-dashed border-surface-border bg-surface-card p-6 text-center text-sm text-slate-500">
+            The result of the first snap will show up here.
+          </div>
+        )}
+      </div>
 
       {error && (
         <p className="rounded-md border border-danger-500/30 bg-danger-500/10 p-3 text-sm text-danger-300">{error}</p>
@@ -159,6 +206,7 @@ export function MatchPage() {
         <PlayCallPanel
           mode={mode}
           disabled={waitingForResolution}
+          roster={myRoster}
           onSelectOffense={(play) => {
             setSelectedOffense(play);
             submitPlay(play);

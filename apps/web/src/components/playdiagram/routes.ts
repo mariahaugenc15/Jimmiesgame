@@ -37,3 +37,23 @@ export function routePath(play: OffensivePlay, depthFraction: number): string {
 export function depthFractionForYards(yards: number): number {
   return Math.max(0.08, Math.min(1, yards / 35));
 }
+
+/** Where routePath's line actually ends, for placing a name label at the doodle figure's resting spot. */
+export function routeEndPoint(play: OffensivePlay, depthFraction: number): { x: number; y: number } {
+  const reach = Math.max(0.06, Math.min(1, depthFraction));
+  const endX = LOS_X + reach * (FIELD_W - LOS_X - 24);
+  switch (play) {
+    case "outside_run":
+      return { x: endX, y: MID_Y - 44 };
+    case "short_pass":
+      return { x: endX, y: MID_Y - 40 };
+    case "deep_pass":
+      return { x: endX, y: MID_Y - 52 };
+    case "play_action":
+      return { x: endX, y: MID_Y - 34 };
+    case "screen_pass":
+      return { x: endX, y: MID_Y + 32 };
+    default:
+      return { x: endX, y: MID_Y };
+  }
+}
