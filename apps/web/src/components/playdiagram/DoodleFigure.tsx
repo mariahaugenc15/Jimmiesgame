@@ -4,7 +4,7 @@ interface DoodleFigureProps {
   /** "O" for offense (filled dot), "X" for defense - coach's-whiteboard convention, not a rendered player likeness. */
   variant?: "offense" | "defense" | "ball";
   size?: number;
-  /** Offense only: the team's chosen icon (a TeamIconShape keyword, an emoji glyph, or null/unset for the default circle). */
+  /** Offense only: the team's chosen icon (a TeamIconShape keyword, or null/unset for the default circle). */
   icon?: string | null;
   /** The small facing/direction tick makes sense on the field (which way the play is headed) but reads as a stray flag off it - default on, turn off for icon pickers/badges. */
   tick?: boolean;
@@ -64,15 +64,6 @@ export function DoodleFigure({ variant = "offense", size = 6, icon, tick = true 
   }
   if (variant === "ball") {
     return <ellipse rx={size * 0.6} ry={size * 0.4} fill="#D4A056" stroke="#3f2a0f" strokeWidth={0.8} />;
-  }
-
-  if (icon && !isTeamIconShape(icon)) {
-    // An emoji icon - render as text, no facing tick (the glyph itself reads as a figure).
-    return (
-      <text textAnchor="middle" dominantBaseline="central" fontSize={size * 2.1}>
-        {icon}
-      </text>
-    );
   }
 
   return (

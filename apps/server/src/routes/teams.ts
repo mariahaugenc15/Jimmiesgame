@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { isTeamIconShape, TEAM_ICON_EMOJI } from "@lockedin/shared";
+import { isTeamIconShape } from "@lockedin/shared";
 import { db } from "../db/client.js";
 import { teams } from "../db/schema.js";
 import type { AuthedRequest } from "../middleware/requireAuth.js";
@@ -15,9 +15,7 @@ const createTeamSchema = z.object({
 });
 
 const setIconSchema = z.object({
-  icon: z.string().refine((v) => isTeamIconShape(v) || TEAM_ICON_EMOJI.includes(v), {
-    message: "Not a recognized team icon.",
-  }),
+  icon: z.string().refine(isTeamIconShape, { message: "Not a recognized team icon." }),
 });
 
 teamsRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {

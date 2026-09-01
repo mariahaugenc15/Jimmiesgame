@@ -11,7 +11,7 @@ interface PlayTheaterProps {
   lastPlay: PlayResult | null;
   selectedOffensivePlay?: OffensivePlay;
   player: InsightPlayer | null;
-  /** The offense's chosen team icon (shape keyword or emoji) - shown on the ball-carrier/lead formation dot instead of the default circle. */
+  /** The offense's chosen team icon (a TeamIconShape keyword) - shown on the ball-carrier/lead formation dot instead of the default circle. */
   offenseIcon?: string | null;
 }
 

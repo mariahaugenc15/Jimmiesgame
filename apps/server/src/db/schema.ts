@@ -58,8 +58,8 @@ export const teams = pgTable("teams", {
   seasonId: uuid("season_id").notNull().references(() => seasons.id, { onDelete: "cascade" }),
   lockedAt: timestamp("locked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  // A shape keyword (see TEAM_ICON_SHAPES) or an emoji glyph, chosen right
-  // before a match starts - null until the owner has picked one.
+  // A shape keyword (see TEAM_ICON_SHAPES), chosen right before a match
+  // starts - null until the owner has picked one.
   icon: text("icon"),
 });
 

@@ -22,7 +22,7 @@ export interface Team {
   seasonId: string;
   lockedAt: string | null;
   createdAt: string;
-  /** Chosen right before a match starts (see TEAM_ICON_SHAPES/TEAM_ICON_EMOJI) - null until the owner has picked one. */
+  /** Chosen right before a match starts (see TEAM_ICON_SHAPES) - null until the owner has picked one. */
   icon: string | null;
 }
 
@@ -30,9 +30,6 @@ export interface Team {
 export type TeamIconShape = "circle" | "triangle" | "square" | "star" | "diamond" | "hexagon";
 
 export const TEAM_ICON_SHAPES: TeamIconShape[] = ["circle", "triangle", "square", "star", "diamond", "hexagon"];
-
-/** The curated emoji alternative to a geometric shape - kept small and football/competition-flavored. */
-export const TEAM_ICON_EMOJI: string[] = ["🦅", "🐻", "🐯", "🦁", "🐺", "🐍", "🛡️", "⚡", "🔥", "💥", "🎯", "👑"];
 
 export function isTeamIconShape(value: string): value is TeamIconShape {
   return (TEAM_ICON_SHAPES as string[]).includes(value);

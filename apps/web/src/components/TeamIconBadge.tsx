@@ -1,13 +1,13 @@
 import { DoodleFigure } from "./playdiagram/DoodleFigure";
 
 interface TeamIconBadgeProps {
-  /** A TeamIconShape keyword, an emoji glyph, or null/undefined if the team hasn't picked one yet. */
+  /** A TeamIconShape keyword, or null/undefined if the team hasn't picked one yet. */
   icon: string | null | undefined;
   size?: number;
   className?: string;
 }
 
-/** A small round badge for showing a team's chosen icon outside the field (scoreboard, dashboard cards) - reuses the same shape/emoji rendering as the on-field doodle figure so the identity stays consistent. */
+/** A small round badge for showing a team's chosen icon outside the field (scoreboard, dashboard cards) - reuses the same shape rendering as the on-field doodle figure so the identity stays consistent. */
 export function TeamIconBadge({ icon, size = 22, className }: TeamIconBadgeProps) {
   return (
     <span
