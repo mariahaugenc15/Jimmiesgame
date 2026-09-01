@@ -1,5 +1,5 @@
 import type { DefensivePlay, OffensivePlay } from "@lockedin/shared";
-import type { InsightPlayer } from "./playInsights";
+import { isStarter, type InsightPlayer } from "./playInsights";
 
 /**
  * Everything here mirrors apps/server/src/gameplay/teamProfile.ts and
@@ -36,13 +36,13 @@ function bestByPosition(
   positions: string[],
   key: "speed" | "power" | "accuracy" | "catching" | "awareness",
 ): number {
-  const candidates = roster.filter((p) => positions.includes(p.position) && p.rating);
+  const candidates = roster.filter((p) => isStarter(p) && positions.includes(p.position) && p.rating);
   if (candidates.length === 0) return DEFAULT_RATING;
   return Math.max(...candidates.map((p) => p.rating![key] as number));
 }
 
 export function buildOffenseProfile(roster: InsightPlayer[]): OffenseProfile {
-  const skillPlayers = roster.filter((p) => p.rating);
+  const skillPlayers = roster.filter((p) => isStarter(p) && p.rating);
   const avgOverall = skillPlayers.length
     ? skillPlayers.reduce((sum, p) => sum + p.rating!.overall, 0) / skillPlayers.length
     : DEFAULT_RATING;
@@ -59,7 +59,7 @@ export function buildOffenseProfile(roster: InsightPlayer[]): OffenseProfile {
 }
 
 export function buildDefenseProfile(roster: InsightPlayer[]): DefenseProfile {
-  const def = roster.find((p) => p.position === "DEF" && p.rating)?.rating;
+  const def = roster.find((p) => isStarter(p) && p.position === "DEF" && p.rating)?.rating;
   if (!def) {
     return { passRush: DEFAULT_RATING, coverage: DEFAULT_RATING, runStop: DEFAULT_RATING, takeawayAwareness: DEFAULT_RATING };
   }

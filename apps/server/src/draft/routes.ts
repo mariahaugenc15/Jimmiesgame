@@ -159,6 +159,71 @@ draftRouter.post("/swap", requireAuth, async (req: AuthedRequest, res) => {
   res.json({ dropped: dropPlayerId, added: addPlayerId, slot: existingSlot.rosterPosition });
 });
 
+const lineupSwapSchema = z.object({
+  teamId: z.string().uuid(),
+  playerAId: z.string(),
+  playerBId: z.string(),
+});
+
+/**
+ * Swaps the starting-lineup slot between two players you already own (e.g.
+ * a bench RB into your starting RB2 spot, sending the current starter to
+ * the bench) - this is how a team with more than one player at a position
+ * decides who actually takes the field, since the play-calling engine only
+ * ever features a starter. Unlike /swap (which brings in a new player from
+ * outside the roster), this never changes who you own, so it's allowed
+ * even after the season roster lock - same as setting a real fantasy
+ * lineup week to week.
+ */
+draftRouter.post("/lineup", requireAuth, async (req: AuthedRequest, res) => {
+  const parsed = lineupSwapSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  const { teamId, playerAId, playerBId } = parsed.data;
+  if (playerAId === playerBId) return res.status(400).json({ error: "Can't swap a player with themself." });
+
+  const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
+  if (!team || team.ownerId !== req.auth!.userId) return res.status(404).json({ error: "Team not found." });
+
+  const slotA = await db.query.rosterSlots.findFirst({
+    where: and(eq(rosterSlots.teamId, teamId), eq(rosterSlots.nflPlayerId, playerAId)),
+  });
+  const slotB = await db.query.rosterSlots.findFirst({
+    where: and(eq(rosterSlots.teamId, teamId), eq(rosterSlots.nflPlayerId, playerBId)),
+  });
+  if (!slotA || !slotB) return res.status(404).json({ error: "Both players must be on this roster." });
+
+  const [playerA, playerB] = await Promise.all([
+    db.query.nflPlayers.findFirst({ where: eq(nflPlayers.id, playerAId) }),
+    db.query.nflPlayers.findFirst({ where: eq(nflPlayers.id, playerBId) }),
+  ]);
+  if (!playerA || !playerB) return res.status(404).json({ error: "Player not found." });
+
+  if (!isValidPickForSlot(playerA.position, slotB.rosterPosition)) {
+    return res.status(400).json({ error: `${playerA.position} cannot fill a ${slotB.rosterPosition} slot.` });
+  }
+  if (!isValidPickForSlot(playerB.position, slotA.rosterPosition)) {
+    return res.status(400).json({ error: `${playerB.position} cannot fill a ${slotA.rosterPosition} slot.` });
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(rosterSlots)
+      .set({ rosterPosition: slotB.rosterPosition })
+      .where(and(eq(rosterSlots.teamId, teamId), eq(rosterSlots.nflPlayerId, playerAId)));
+    await tx
+      .update(rosterSlots)
+      .set({ rosterPosition: slotA.rosterPosition })
+      .where(and(eq(rosterSlots.teamId, teamId), eq(rosterSlots.nflPlayerId, playerBId)));
+  });
+
+  res.json({
+    playerAId,
+    newSlotForA: slotB.rosterPosition,
+    playerBId,
+    newSlotForB: slotA.rosterPosition,
+  });
+});
+
 draftRouter.post("/lock", requireAuth, async (req: AuthedRequest, res) => {
   const schema = z.object({ teamId: z.string().uuid() });
   const parsed = schema.safeParse(req.body);

@@ -86,6 +86,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ teamId, dropPlayerId, addPlayerId }),
     }),
+  setLineupSlot: (teamId: string, playerAId: string, playerBId: string) =>
+    request<{ playerAId: string; newSlotForA: string; playerBId: string; newSlotForB: string }>("/api/drafts/lineup", {
+      method: "POST",
+      body: JSON.stringify({ teamId, playerAId, playerBId }),
+    }),
 
   players: () => request<{ id: string; name: string; position: string; realNflTeam: string; rating: PlayerRating | null }[]>(
     "/api/players",

@@ -5,6 +5,13 @@ export interface InsightPlayer {
   name: string;
   position: string;
   rating: PlayerRating | null;
+  /** The roster slot they occupy (QB/RB/WR/TE/FLEX/DEF/K/BENCH) - a benched player never takes the field. */
+  rosterPosition: string;
+}
+
+/** A benched player never takes the field, so they're never featured/counted toward a team's on-field profile. */
+export function isStarter(player: InsightPlayer): boolean {
+  return player.rosterPosition !== "BENCH";
 }
 
 const RUN_PLAYS: OffensivePlay[] = ["inside_run", "outside_run", "play_action"];
@@ -30,7 +37,7 @@ export function bestOffensePlayerFor(play: OffensivePlay, roster: InsightPlayer[
   const isRun = RUN_PLAYS.includes(play);
   const positions = isRun ? ["RB"] : ["WR", "TE"];
   const { key } = offenseAttributeFor(play);
-  const candidates = roster.filter((p) => positions.includes(p.position) && p.rating);
+  const candidates = roster.filter((p) => isStarter(p) && positions.includes(p.position) && p.rating);
   if (candidates.length === 0) return null;
   return candidates.reduce((best, p) => ((p.rating![key] as number) > (best.rating![key] as number) ? p : best));
 }
@@ -53,7 +60,7 @@ export interface DefenseUnitInsight {
 
 /** The fantasy DEF/ST roster slot's sub-ratings, mapped the same way buildDefenseProfile does server-side. */
 export function defenseUnitInsight(roster: InsightPlayer[]): DefenseUnitInsight | null {
-  const def = roster.find((p) => p.position === "DEF" && p.rating);
+  const def = roster.find((p) => isStarter(p) && p.position === "DEF" && p.rating);
   if (!def?.rating) return null;
   return {
     name: def.name,

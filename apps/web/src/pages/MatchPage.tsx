@@ -99,6 +99,7 @@ export function MatchPage() {
               name: entry.player!.name,
               position: entry.player!.position,
               rating: ratingById.get(entry.nflPlayerId) ?? null,
+              rosterPosition: entry.rosterPosition,
             }));
 
         const home = toInsightPlayers(homeRoster);
