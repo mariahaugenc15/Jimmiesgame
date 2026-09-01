@@ -9,7 +9,7 @@
 .play-diagram-route {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: play-diagram-route-draw 650ms ease-out forwards;
+  animation: play-diagram-route-draw 1950ms ease-out forwards;
 }
 
 @keyframes play-diagram-badge-pop {
@@ -23,7 +23,7 @@
   }
 }
 .play-diagram-badge {
-  animation: play-diagram-badge-pop 260ms ease-out 550ms both;
+  animation: play-diagram-badge-pop 260ms ease-out 1750ms both;
 }
 
 @keyframes play-diagram-td-pulse {
@@ -97,7 +97,7 @@
   }
 }
 .outcome-callout {
-  animation: outcome-callout-pop 2.2s cubic-bezier(0.16, 1, 0.3, 1) 750ms both;
+  animation: outcome-callout-pop 2.4s cubic-bezier(0.16, 1, 0.3, 1) 2100ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {

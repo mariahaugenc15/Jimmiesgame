@@ -2,7 +2,7 @@ import { useId } from "react";
 import type { OffensivePlay, PlayResult } from "@lockedin/shared";
 import { DoodleFigure } from "./DoodleFigure";
 import { FieldBackground } from "./FieldBackground";
-import { DEFENDER_SPOTS, depthFractionForYards, FIELD_H, FIELD_W, routeEndPoint, routePath } from "./routes";
+import { DEFENDER_SPOTS, defenderPursuitPath, depthFractionForYards, FIELD_H, FIELD_W, routeEndPoint, routePath } from "./routes";
 import { explainOutcome, shortenName, type InsightPlayer } from "../../lib/playInsights";
 import "./playdiagram.css";
 
@@ -62,12 +62,31 @@ export function PlayDiagram({ play, result, player }: PlayDiagramProps) {
       <svg viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} className="w-full">
         <FieldBackground />
 
-        {/* defense: doodle X's scattered downfield, coach's-whiteboard convention */}
-        {DEFENDER_SPOTS.map(([x, y], i) => (
-          <g key={i} transform={`translate(${x},${y})`}>
-            <DoodleFigure variant="defense" size={4.5} />
-          </g>
-        ))}
+        {/* defense: doodle X's scattered downfield, coach's-whiteboard convention -
+            each closes in on the play along its own short pursuit path so the
+            field reads as both sides reacting, not offense-only motion. */}
+        {DEFENDER_SPOTS.map((spot, i) => {
+          const [x, y] = spot;
+          const defPathId = `${routeId}-def-${i}`;
+          return (
+            <g key={i}>
+              <path id={defPathId} d={defenderPursuitPath(spot, end)} fill="none" stroke="none" />
+              <g transform={`translate(${x},${y})`}>
+                <DoodleFigure variant="defense" size={4.5} />
+                <animateMotion
+                  dur="1.6s"
+                  begin={`${0.15 + i * 0.1}s`}
+                  fill="freeze"
+                  calcMode="spline"
+                  keyTimes="0;1"
+                  keySplines="0.33 0 0.15 1"
+                >
+                  <mpath href={`#${defPathId}`} />
+                </animateMotion>
+              </g>
+            </g>
+          );
+        })}
 
         {/* the route itself, and the path the ball-carrier doodle animates along */}
         <path
@@ -83,7 +102,15 @@ export function PlayDiagram({ play, result, player }: PlayDiagramProps) {
 
         <g>
           <DoodleFigure variant="offense" size={6} />
-          <animateMotion dur="0.7s" begin="0.05s" fill="freeze" rotate="auto">
+          <animateMotion
+            dur="1.9s"
+            begin="0.05s"
+            fill="freeze"
+            rotate="auto"
+            calcMode="spline"
+            keyTimes="0;1"
+            keySplines="0.3 0 0.2 1"
+          >
             <mpath href={`#${routeId}`} />
           </animateMotion>
         </g>

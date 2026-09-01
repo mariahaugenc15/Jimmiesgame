@@ -49,6 +49,25 @@ export function depthFractionForYards(yards: number): number {
 }
 
 /** Where routePath's line actually ends, for placing a name label at the doodle figure's resting spot. */
+/**
+ * A short, organic pursuit path for one defender, in coordinates LOCAL to
+ * their pre-snap spot (starts at 0,0) - meant to be applied via
+ * <animateMotion> on a group that's already statically translated to that
+ * spot, so the defender holds their formation position until the moment
+ * their own motion begins rather than snapping in from the SVG origin.
+ * Eases toward the ball-carrier's route (not all the way to its end, so the
+ * motion reads as "closing in" rather than implying a tackle that may not
+ * have happened). The slight perpendicular bow keeps four simultaneous
+ * defenders from all reading as identical straight-line slides.
+ */
+export function defenderPursuitPath([x, y]: [number, number], target: { x: number; y: number }, reach = 0.45): string {
+  const dx = (target.x - x) * reach;
+  const dy = (target.y - y) * reach;
+  const bowX = dx / 2 - dy * 0.12;
+  const bowY = dy / 2 + dx * 0.12;
+  return `M0,0 Q${bowX},${bowY} ${dx},${dy}`;
+}
+
 export function routeEndPoint(play: OffensivePlay, depthFraction: number): { x: number; y: number } {
   const reach = Math.max(0.06, Math.min(1, depthFraction));
   const endX = LOS_X + reach * (FIELD_W - LOS_X - 24);
