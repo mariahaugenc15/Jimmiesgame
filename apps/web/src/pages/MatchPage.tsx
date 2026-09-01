@@ -3,11 +3,11 @@ import { useParams, useSearchParams } from "react-router-dom";
 import type { DefensivePlay, GameState, OffensivePlay } from "@lockedin/shared";
 import { ApiError, api } from "../lib/api";
 import { ScoreBoard } from "../components/ScoreBoard";
-import { FieldView } from "../components/FieldView";
+import { FieldPositionTracker } from "../components/FieldPositionTracker";
 import { PlayCallPanel } from "../components/PlayCallPanel";
 import { ProbabilityBar } from "../components/ProbabilityBar";
 import { LockedInLogo } from "../components/LockedInLogo";
-import { PlayDiagram } from "../components/playdiagram/PlayDiagram";
+import { PlayTheater } from "../components/playdiagram/PlayTheater";
 import { HowToPlay } from "../components/HowToPlay";
 import type { InsightPlayer } from "../lib/playInsights";
 
@@ -78,7 +78,7 @@ export function MatchPage() {
       .catch(() => {});
   }, [state?.homeTeamId, state?.awayTeamId]);
 
-  // Both rosters (with real ratings) drive the play-diagram's player labels
+  // Both rosters (with real ratings) drive the play-theater's player labels
   // and the play-call panel's insight hints. Fetched once per match, not on
   // every poll - team/home/away ids never change once a match has started.
   useEffect(() => {
@@ -137,7 +137,8 @@ export function MatchPage() {
     );
   }
 
-  const possessionIsHome = state.possessionTeamId === state.homeTeamId;
+  const isHomeMine = teamId === state.homeTeamId;
+  const possessionIsHome = state.possessionTeamId ? state.possessionTeamId === state.homeTeamId : null;
   const isOffense = state.possessionTeamId === teamId;
   const isDefense = !isOffense && (teamId === state.homeTeamId || teamId === state.awayTeamId);
   const mode: "offense" | "defense" | "waiting" =
@@ -147,7 +148,7 @@ export function MatchPage() {
     : null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-4 pb-24 sm:p-6">
+    <div className="mx-auto max-w-4xl space-y-4 p-4 pb-24 sm:p-6">
       <ScoreBoard
         homeName={teamNames.home}
         awayName={teamNames.away}
@@ -155,41 +156,32 @@ export function MatchPage() {
         awayScore={state.awayScore}
         clock={state.clock}
         phase={state.phase}
+        isHomeMine={isHomeMine}
+        possessionIsHome={possessionIsHome}
       />
 
       {state.phase !== "final" && <HowToPlay />}
 
-      {/* Side by side on desktop so the live drive state and the last play's
-          result are both visible without scrolling; stacks on mobile. */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <FieldView
-          down={state.down}
-          lastPlay={state.lastPlay}
-          possessionIsHome={possessionIsHome}
-          selectedOffensivePlay={selectedOffense}
-        />
+      {/* The play theater is the single largest element on the screen - a
+          continuous field that goes from pre-snap waiting to animated
+          route/ball-carrier development to outcome, not two separate
+          panels. Remounted per resolved play so its animation replays. */}
+      <PlayTheater
+        key={state.log.length}
+        down={state.down}
+        lastPlay={state.lastPlay}
+        selectedOffensivePlay={selectedOffense}
+        player={featuredPlayer}
+      />
 
-        {state.lastPlay ? (
-          <div className="space-y-3">
-            <PlayDiagram
-              key={state.log.length}
-              play={state.lastPlay.offensivePlay}
-              result={state.lastPlay}
-              player={featuredPlayer}
-            />
-            <div className="space-y-2 rounded-lg border border-surface-border bg-surface-card p-3">
-              <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} color="#38bdf8" />
-              {state.lastPlay.breakawayChance > 0 && (
-                <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center rounded-xl border border-dashed border-surface-border bg-surface-card p-6 text-center text-sm text-slate-500">
-            The result of the first snap will show up here.
-          </div>
-        )}
-      </div>
+      {state.lastPlay && (
+        <div className="space-y-2 rounded-lg border border-surface-border bg-surface-card p-3">
+          <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} />
+          {state.lastPlay.breakawayChance > 0 && (
+            <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
+          )}
+        </div>
+      )}
 
       {error && (
         <p className="rounded-md border border-danger-500/30 bg-danger-500/10 p-3 text-sm text-danger-300">{error}</p>
@@ -214,6 +206,8 @@ export function MatchPage() {
           onSelectDefense={submitPlay}
         />
       )}
+
+      <FieldPositionTracker down={state.down} />
 
       <div
         ref={logRef}

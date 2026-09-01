@@ -1,7 +1,8 @@
 import { useId } from "react";
 import type { OffensivePlay, PlayResult } from "@lockedin/shared";
 import { DoodleFigure } from "./DoodleFigure";
-import { depthFractionForYards, FIELD_H, FIELD_W, LOS_X, routeEndPoint, routePath } from "./routes";
+import { FieldBackground } from "./FieldBackground";
+import { DEFENDER_SPOTS, depthFractionForYards, FIELD_H, FIELD_W, routeEndPoint, routePath } from "./routes";
 import { explainOutcome, shortenName, type InsightPlayer } from "../../lib/playInsights";
 import "./playdiagram.css";
 
@@ -17,7 +18,10 @@ function outcomeMeta(result: PlayResult): OutcomeMeta {
     case "touchdown":
       return { text: "TOUCHDOWN!", className: "bg-primary-500/20 text-primary-300 border-primary-400/50", celebrate: true };
     case "gain":
-      return { text: `+${result.yards} YDS`, className: "bg-primary-500/15 text-primary-300 border-primary-500/40" };
+      return {
+        text: `${result.yards >= 0 ? "+" : ""}${result.yards} YDS`,
+        className: "bg-primary-500/15 text-primary-300 border-primary-500/40",
+      };
     case "incomplete":
       return { text: "INCOMPLETE", className: "bg-locked-500/15 text-locked-300 border-locked-500/40" };
     case "sack":
@@ -30,13 +34,6 @@ function outcomeMeta(result: PlayResult): OutcomeMeta {
       return { text: "TURNOVER ON DOWNS", className: "bg-locked-500/15 text-locked-300 border-locked-500/40" };
   }
 }
-
-const DEFENDER_SPOTS: [number, number][] = [
-  [LOS_X + 30, 30],
-  [LOS_X + 40, 60],
-  [LOS_X + 55, 92],
-  [LOS_X + 80, 45],
-];
 
 interface PlayDiagramProps {
   play: OffensivePlay;
@@ -63,12 +60,7 @@ export function PlayDiagram({ play, result, player }: PlayDiagramProps) {
   return (
     <div className="overflow-hidden rounded-xl bg-pitch p-3">
       <svg viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} className="w-full">
-        {/* mini field: yard stripes + end zone, coach's-whiteboard green */}
-        {Array.from({ length: 6 }, (_, i) => LOS_X - 20 + i * 44).map((x) => (
-          <line key={x} x1={x} y1={8} x2={x} y2={FIELD_H - 8} stroke="#1f6b3f" strokeWidth={1} />
-        ))}
-        <rect x={FIELD_W - 22} y={0} width={22} height={FIELD_H} fill="#062b18" />
-        <line x1={LOS_X} y1={4} x2={LOS_X} y2={FIELD_H - 4} stroke="#38bdf8" strokeWidth={1.5} strokeDasharray="3 2" />
+        <FieldBackground />
 
         {/* defense: doodle X's scattered downfield, coach's-whiteboard convention */}
         {DEFENDER_SPOTS.map(([x, y], i) => (

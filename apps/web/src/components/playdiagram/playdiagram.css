@@ -70,6 +70,36 @@
   animation: route-backdrop-cycle 9s ease-in-out infinite;
 }
 
+/* The big transient outcome banner: pops in once the route/ball-carrier
+   motion has had time to play out (delay), holds so it reads as the
+   emotional peak of the snap, then fades - letting the smaller badge and
+   drive log take over as the lasting record. animation-fill-mode: forwards
+   means it just stays invisible after, no JS timer needed to hide it. */
+@keyframes outcome-callout-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.75) translateY(8px);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.06) translateY(0);
+  }
+  20% {
+    transform: scale(1);
+  }
+  72% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+.outcome-callout {
+  animation: outcome-callout-pop 2.2s cubic-bezier(0.16, 1, 0.3, 1) 750ms both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .play-diagram-route {
     animation: none;
@@ -88,5 +118,12 @@
     animation: none;
     stroke-dashoffset: 0;
     opacity: 0.5;
+  }
+  .outcome-callout {
+    /* The same outcome text is always available, non-animated, in the
+       smaller badge below the diagram - safe to just suppress the big
+       transient version rather than leave a permanent overlay in place. */
+    animation: none;
+    opacity: 0;
   }
 }

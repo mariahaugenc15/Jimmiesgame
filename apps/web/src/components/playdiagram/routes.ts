@@ -1,9 +1,11 @@
 import type { OffensivePlay } from "@lockedin/shared";
 
 export const FIELD_W = 300;
-export const FIELD_H = 140;
+// Taller than the original 140 - this is now the largest visual element on
+// the gameplay screen (the "play theater"), not a small secondary panel.
+export const FIELD_H = 180;
 export const LOS_X = 44;
-const MID_Y = 70;
+const MID_Y = FIELD_H / 2;
 
 /**
  * A small, reusable set of route-line shapes (one per offensive play call),
@@ -32,6 +34,14 @@ export function routePath(play: OffensivePlay, depthFraction: number): string {
       return `M${LOS_X},${MID_Y} L${endX},${MID_Y}`;
   }
 }
+
+/** Scattered defender doodle spots, shared by the pre-snap and resolved states so the defense doesn't visibly "jump" between them. */
+export const DEFENDER_SPOTS: [number, number][] = [
+  [LOS_X + 30, MID_Y - 40],
+  [LOS_X + 40, MID_Y - 10],
+  [LOS_X + 55, MID_Y + 22],
+  [LOS_X + 80, MID_Y - 25],
+];
 
 /** Roughly maps real yards gained onto a 0..1 fraction of the diagram's width, for visual pacing only. */
 export function depthFractionForYards(yards: number): number {

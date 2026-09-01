@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Card } from "./ui/Card";
+import { buttonPrimary } from "../lib/ui";
 
 const DISMISS_KEY = "lockedin_howto_dismissed";
 
@@ -10,10 +12,41 @@ function readDismissed(): boolean {
   }
 }
 
+const STEPS: { key: string; body: string }[] = [
+  { key: "1–6", body: "On offense, press a number key or click a play to call it." },
+  { key: "1–5", body: "On defense, do the same to call your stop." },
+  { key: "⚡", body: "Both sides call at once — the play resolves the moment both are in." },
+  { key: "▶", body: "Watch the play theater after each snap — the route and ball-carrier show how it played out." },
+];
+
+function HowToPlayContent({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="text-lg font-bold text-white">How to play</h2>
+      </div>
+      <ul className="mt-3 space-y-2.5 text-sm text-slate-300">
+        {STEPS.map(({ key, body }) => (
+          <li key={key} className="flex items-start gap-2.5">
+            <span className="mt-0.5 inline-flex h-5 min-w-[2.75rem] shrink-0 items-center justify-center rounded bg-surface-page px-1 text-center font-mono text-[11px] text-primary-400">
+              {key}
+            </span>
+            {body}
+          </li>
+        ))}
+      </ul>
+      <button onClick={onDismiss} className={`${buttonPrimary} mt-4 w-full`}>
+        Got it
+      </button>
+    </>
+  );
+}
+
 /**
- * Onboarding for match controls: shown open the first time someone reaches
- * a match, collapses to a small re-openable "How to play" pill once
- * dismissed (remembered per-browser) so returning players aren't nagged.
+ * Onboarding for match controls: a one-time modal the first time someone
+ * reaches a match (never eats permanent field real estate, even on that
+ * first view), collapsing afterward to a small re-openable "How to play"
+ * pill remembered per-browser so returning players aren't nagged.
  */
 export function HowToPlay() {
   const [open, setOpen] = useState(() => !readDismissed());
@@ -42,39 +75,10 @@ export function HowToPlay() {
   }
 
   return (
-    <div className="rounded-xl border border-primary-500/30 bg-surface-raised p-4">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="text-sm font-bold text-white">How to play</h2>
-        <button onClick={dismiss} className="shrink-0 text-xs font-medium text-slate-400 transition-colors hover:text-slate-200">
-          Got it
-        </button>
-      </div>
-      <ul className="mt-2.5 space-y-2 text-sm text-slate-300">
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 inline-flex h-5 min-w-[2.75rem] shrink-0 items-center justify-center rounded bg-surface-page px-1 font-mono text-[11px] text-primary-400">
-            1–6
-          </span>
-          On offense, press a number key or click a play to call it.
-        </li>
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 inline-flex h-5 min-w-[2.75rem] shrink-0 items-center justify-center rounded bg-surface-page px-1 font-mono text-[11px] text-primary-400">
-            1–5
-          </span>
-          On defense, do the same to call your stop.
-        </li>
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 inline-flex h-5 min-w-[2.75rem] shrink-0 items-center justify-center rounded bg-surface-page px-1 text-center text-[11px] text-primary-400">
-            ⚡
-          </span>
-          Both sides call at once — the play resolves the moment both are in.
-        </li>
-        <li className="flex items-start gap-2">
-          <span className="mt-0.5 inline-flex h-5 min-w-[2.75rem] shrink-0 items-center justify-center rounded bg-surface-page px-1 text-center text-[11px] text-primary-400">
-            ▶
-          </span>
-          Watch the diagram after each snap — the route and ball-carrier show how it played out.
-        </li>
-      </ul>
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 p-4">
+      <Card elevated className="w-full max-w-sm p-6">
+        <HowToPlayContent onDismiss={dismiss} />
+      </Card>
     </div>
   );
 }
