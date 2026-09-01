@@ -31,6 +31,7 @@ export function MatchPage() {
   const [teamIcons, setTeamIcons] = useState<{ home: string | null; away: string | null }>({ home: null, away: null });
   const [playerById, setPlayerById] = useState<Map<string, InsightPlayer>>(new Map());
   const [myRoster, setMyRoster] = useState<InsightPlayer[]>([]);
+  const [opponentRoster, setOpponentRoster] = useState<InsightPlayer[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
   const lastLogLengthRef = useRef(0);
 
@@ -106,6 +107,7 @@ export function MatchPage() {
         for (const p of [...home, ...away]) merged.set(p.id, p);
         setPlayerById(merged);
         setMyRoster(teamId === state.homeTeamId ? home : away);
+        setOpponentRoster(teamId === state.homeTeamId ? away : home);
       })
       .catch(() => {});
   }, [state?.homeTeamId, state?.awayTeamId, teamId]);
@@ -212,6 +214,7 @@ export function MatchPage() {
           mode={mode}
           disabled={waitingForResolution}
           roster={myRoster}
+          opponentRoster={opponentRoster}
           onSelectOffense={(play) => {
             setSelectedOffense(play);
             submitPlay(play);

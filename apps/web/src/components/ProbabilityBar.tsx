@@ -6,7 +6,7 @@ interface ProbabilityBarProps {
 }
 
 /** Red/amber/green by value, so risk reads at a glance during fast play-calling - not a flat color regardless of the number. */
-function riskColor(pct: number): string {
+export function riskColor(pct: number): string {
   if (pct < 40) return "#F87171"; // danger-400
   if (pct < 70) return "#FBBF24"; // locked-400
   return "#22E29A"; // primary-400
