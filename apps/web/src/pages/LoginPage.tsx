@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/api";
 import { buttonPrimary } from "../lib/ui";
+import { LockedInLogo } from "../components/LockedInLogo";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -27,9 +28,19 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-[80vh] items-center justify-center px-4">
+    <div className="relative flex min-h-[80vh] flex-col items-center justify-center gap-8 px-4">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <LockedInLogo mode="once" size={44} />
+        <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          Make your fantasy a reality
+        </h1>
+        <p className="max-w-md text-sm text-slate-400 sm:text-base">
+          A fantasy team simulator so your whole team can be on the same field.
+        </p>
+      </div>
+
       <div className="relative w-full max-w-sm rounded-2xl border border-surface-border bg-surface-card p-6 shadow-raised">
-        <h1 className="mb-4 text-xl font-bold text-primary-400">Log in</h1>
+        <h2 className="mb-4 text-xl font-bold text-primary-400">Log in</h2>
         <form onSubmit={onSubmit} className="space-y-3">
           <input
             type="email"
