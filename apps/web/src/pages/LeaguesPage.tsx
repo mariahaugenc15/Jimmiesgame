@@ -35,23 +35,35 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-/** A league's id is how you invite people to it - a copy button beats asking someone to select-and-copy a raw UUID out of a status line. */
-function CopyIdButton({ id }: { id: string }) {
+/** A clickable invite link beats asking someone to copy-paste a raw league ID into a text field - this is how you invite people to a league. */
+function inviteLinkFor(leagueId: string): string {
+  return `${window.location.origin}/join-league/${leagueId}`;
+}
+
+/** Accepts either a raw league ID or a full invite link pasted in whole - pulls the ID back out either way. */
+function extractLeagueId(input: string): string {
+  const trimmed = input.trim();
+  const marker = "/join-league/";
+  const i = trimmed.lastIndexOf(marker);
+  return i === -1 ? trimmed : trimmed.slice(i + marker.length);
+}
+
+function CopyInviteLinkButton({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <button
       onClick={async () => {
         try {
-          await navigator.clipboard.writeText(id);
+          await navigator.clipboard.writeText(inviteLinkFor(id));
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         } catch {
-          // clipboard access can be denied - the ID is still visible to select/copy by hand.
+          // clipboard access can be denied - the link is still visible to select/copy by hand once expanded.
         }
       }}
       className={`${buttonTertiary} border border-surface-border`}
     >
-      {copied ? "Copied!" : "Copy invite ID"}
+      {copied ? "Copied!" : "Copy invite link"}
     </button>
   );
 }
@@ -117,11 +129,12 @@ export function LeaguesPage() {
 
   async function joinByInput() {
     if (!teamId || !joinInput.trim()) return;
+    const leagueId = extractLeagueId(joinInput);
     setBusy(true);
     try {
-      await api.joinLeague(joinInput.trim(), teamId);
+      await api.joinLeague(leagueId, teamId);
       const rows = await loadMyLeagues(teamId);
-      const joined = rows.find((r) => r.id === joinInput.trim());
+      const joined = rows.find((r) => r.id === leagueId);
       setJoinInput("");
       setStatus(joined ? `Joined "${joined.name}".` : "Joined league.");
       if (joined) await viewStandings(joined);
@@ -168,7 +181,7 @@ export function LeaguesPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-slate-100">{league.name}</p>
                       <div className="flex items-center gap-2">
-                        <CopyIdButton id={league.id} />
+                        <CopyInviteLinkButton id={league.id} />
                         <button onClick={() => viewStandings(league)} className={buttonSecondary}>
                           View standings
                         </button>
@@ -210,7 +223,7 @@ export function LeaguesPage() {
           )}
 
           <Card elevated className="p-6">
-            <SectionHeader title="Create a private league" subtitle="You're auto-joined, then share the invite ID with friends." />
+            <SectionHeader title="Create a private league" subtitle="You're auto-joined, then share the invite link with friends." />
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 value={leagueName}
@@ -224,12 +237,12 @@ export function LeaguesPage() {
           </Card>
 
           <Card className="p-5">
-            <SectionHeader title="Join a league" subtitle="Paste a league ID a friend shared with you." />
+            <SectionHeader title="Join a league" subtitle="Paste an invite link (or just the league ID) a friend shared with you." />
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 value={joinInput}
                 onChange={(e) => setJoinInput(e.target.value)}
-                placeholder="League ID"
+                placeholder="Invite link or league ID"
                 className="flex-1 rounded-lg border border-surface-border bg-surface-page px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary-500/60"
               />
               <button onClick={joinByInput} disabled={busy || !teamId} className={buttonSecondary}>

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Nav } from "./components/Nav";
 import { MobileTabBar } from "./components/MobileTabBar";
@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { RosterPage } from "./pages/RosterPage";
 import { MatchPage } from "./pages/MatchPage";
 import { LeaguesPage } from "./pages/LeaguesPage";
+import { JoinLeaguePage } from "./pages/JoinLeaguePage";
 import { BrandTestPage } from "./pages/BrandTestPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { LockedInLogo } from "./components/LockedInLogo";
@@ -23,8 +24,12 @@ function AppLoading() {
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <AppLoading />;
-  if (!user) return <Navigate to="/login" replace />;
+  // Carries the page someone was trying to reach (e.g. a shared league
+  // invite link) through the login/signup detour, so LoginPage/SignupPage
+  // can send them there afterward instead of always to the Dashboard.
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   return <>{children}</>;
 }
 
@@ -67,6 +72,14 @@ export default function App() {
           element={
             <RequireAuth>
               <MatchPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/join-league/:leagueId"
+          element={
+            <RequireAuth>
+              <JoinLeaguePage />
             </RequireAuth>
           }
         />

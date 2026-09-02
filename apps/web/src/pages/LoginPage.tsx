@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/api";
 import { buttonPrimary } from "../lib/ui";
@@ -8,6 +8,7 @@ import { LockedInLogo } from "../components/LockedInLogo";
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +20,10 @@ export function LoginPage() {
     setError(null);
     try {
       await login(email, password);
-      navigate("/");
+      // RequireAuth stashes the page someone was headed to (e.g. a league
+      // invite link) in location.state.from before bouncing them here.
+      const from = (location.state as { from?: string } | null)?.from;
+      navigate(from || "/");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");
     } finally {
@@ -65,7 +69,7 @@ export function LoginPage() {
         </form>
         <p className="mt-4 text-center text-sm text-slate-400">
           No account?{" "}
-          <Link to="/signup" className="font-medium text-primary-400 hover:text-primary-300">
+          <Link to="/signup" state={location.state} className="font-medium text-primary-400 hover:text-primary-300">
             Sign up
           </Link>
         </p>

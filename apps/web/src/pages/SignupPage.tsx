@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../lib/api";
 import { buttonPrimary } from "../lib/ui";
@@ -8,6 +8,7 @@ import { LockedInLogo } from "../components/LockedInLogo";
 export function SignupPage() {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +21,12 @@ export function SignupPage() {
     setError(null);
     try {
       await signup(username, email, password);
-      navigate("/");
+      // A brand-new signup has no team yet, so a league-invite destination
+      // isn't reachable yet either (JoinLeaguePage handles that itself with
+      // a "create your team first" message) - still worth honoring for any
+      // other destination someone was on their way to.
+      const from = (location.state as { from?: string } | null)?.from;
+      navigate(from || "/");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong.");
     } finally {
@@ -74,7 +80,7 @@ export function SignupPage() {
         </form>
         <p className="mt-4 text-center text-sm text-slate-400">
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-primary-400 hover:text-primary-300">
+          <Link to="/login" state={location.state} className="font-medium text-primary-400 hover:text-primary-300">
             Log in
           </Link>
         </p>

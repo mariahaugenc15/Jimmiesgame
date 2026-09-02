@@ -33,7 +33,7 @@ export function PlayerCard({ name, position, slot, team, overall, action }: Play
   const pct = overall ? Math.round(((overall - RATING_MIN) / (RATING_MAX - RATING_MIN)) * 100) : 0;
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface-page px-3 py-2.5 transition-colors hover:border-primary-500/30">
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-surface-border bg-surface-page px-3 py-2.5 transition-colors hover:border-primary-500/30">
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold text-white/90 shadow-card"
         style={{ backgroundColor: teamColor(team) }}
@@ -41,7 +41,11 @@ export function PlayerCard({ name, position, slot, team, overall, action }: Play
         {team || "—"}
       </span>
 
-      <div className="min-w-0 flex-1">
+      {/* A width floor, not just flex-1, so this never gets squeezed illegibly
+          thin by a wide action slot - flex-wrap below is the real backstop
+          (the action drops to its own line first), this just keeps the name
+          readable right up until it does. */}
+      <div className="min-w-[140px] flex-1 basis-32">
         <div className="flex items-center gap-2">
           <span
             className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-bold ${POSITION_STYLES[slot] ?? POSITION_STYLES.BENCH}`}
@@ -53,13 +57,13 @@ export function PlayerCard({ name, position, slot, team, overall, action }: Play
           </span>
         </div>
         <div className="mt-1.5 flex items-center gap-2">
-          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-surface-border">
+          <div className="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-surface-border">
             <div className={`h-full rounded-full ${ratingBarColor(overall ?? 0)}`} style={{ width: `${pct}%` }} />
           </div>
-          <span className={`text-[11px] font-bold tabular-nums ${ratingColor(overall ?? 0)}`}>
+          <span className={`shrink-0 text-[11px] font-bold tabular-nums ${ratingColor(overall ?? 0)}`}>
             {overall ?? "—"}
           </span>
-          <span className="text-[11px] text-slate-500">{position}</span>
+          <span className="shrink-0 text-[11px] text-slate-500">{position}</span>
         </div>
       </div>
 

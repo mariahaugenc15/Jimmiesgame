@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ROSTER_RULES } from "@lockedin/shared";
 import { api, ApiError } from "../lib/api";
 import { LockButton } from "../components/LockButton";
@@ -6,6 +6,7 @@ import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { PlayerCard } from "../components/ui/PlayerCard";
 import { RosterIcon } from "../components/navIcons";
+import { teamColor } from "../lib/nflTeamColors";
 import { buttonSecondary } from "../lib/ui";
 
 function isValidForSlot(position: string, slot: string): boolean {
@@ -31,11 +32,17 @@ interface RatedPlayer {
 const SLOT_ORDER = ["QB", "RB", "WR", "TE", "FLEX", "DEF", "K", "BENCH"];
 
 /**
- * A bench player's promotion control: pick which eligible starter to swap
- * places with, then confirm. Only offered when there's at least one starter
- * slot this player's real position can actually fill (e.g. a K can't swap
- * into an RB slot) - matches ROSTER_RULES exactly, the same rules the
- * server enforces on the swap.
+ * A bench player's promotion control: a small "Start" button that opens a
+ * popover listing which eligible starter to swap places with - picking one
+ * swaps immediately (freely reversible, so no separate confirm step). Only
+ * offered when there's at least one starter slot this player's real
+ * position can actually fill (e.g. a K can't swap into an RB slot) -
+ * matches ROSTER_RULES exactly, the same rules the server enforces.
+ *
+ * Deliberately a compact button + floating popover rather than an inline
+ * native <select> - a <select> sized to fit a full "Start over <name>
+ * (<slot>)" option can't shrink to fit a narrow card, and the overflow
+ * used to render right on top of the player's name/rating next to it.
  */
 function BenchSwapControl({
   benchEntry,
@@ -46,38 +53,134 @@ function BenchSwapControl({
   starters: RosterEntry[];
   onSwap: (benchPlayerId: string, starterPlayerId: string) => Promise<void>;
 }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const eligible = benchEntry.player
     ? starters.filter((s) => s.player && isValidForSlot(benchEntry.player!.position, s.rosterPosition))
     : [];
-  const [target, setTarget] = useState(eligible[0]?.nflPlayerId ?? "");
 
   useEffect(() => {
-    if (!eligible.some((s) => s.nflPlayerId === target)) setTarget(eligible[0]?.nflPlayerId ?? "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eligible.map((s) => s.nflPlayerId).join(",")]);
+    if (!open) return;
+    function onClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
 
-  if (eligible.length === 0 || !target) return null;
+  if (eligible.length === 0) return null;
+
+  async function pick(starterId: string) {
+    setBusy(true);
+    try {
+      await onSwap(benchEntry.nflPlayerId, starterId);
+      setOpen(false);
+    } catch {
+      // onSwap already surfaces the error via the page's status banner - leave the popover open to retry.
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
-      <select
-        value={target}
-        onChange={(e) => setTarget(e.target.value)}
-        className="rounded-md border border-surface-border bg-surface-page px-1.5 py-1.5 text-[11px] text-slate-200 outline-none"
+    <div className="relative shrink-0" ref={containerRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        disabled={busy}
+        className="flex items-center gap-1 rounded-md border border-surface-border bg-surface-page px-2.5 py-1.5 text-[11px] font-semibold text-primary-400 transition-colors hover:border-primary-500/40 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {eligible.map((s) => (
-          <option key={s.nflPlayerId} value={s.nflPlayerId}>
-            Start over {s.player!.name} ({s.rosterPosition})
-          </option>
-        ))}
-      </select>
-      <LockButton
-        label="Start"
-        lockedLabel="Started"
-        resetAfterMs={1500}
-        onConfirm={() => onSwap(benchEntry.nflPlayerId, target)}
-        className="shrink-0 px-2.5 py-1.5 text-[11px]"
-      />
+        {busy ? "Starting…" : "Start"}
+        <span aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`}>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-10 mt-1 w-56 rounded-lg border border-surface-border bg-surface-raised p-1 shadow-raised">
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Swap into</p>
+          {eligible.map((s) => (
+            <button
+              key={s.nflPlayerId}
+              onClick={() => pick(s.nflPlayerId)}
+              disabled={busy}
+              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs text-slate-200 transition-colors hover:bg-surface-page disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="truncate">{s.player!.name}</span>
+              <span className="shrink-0 text-[10px] text-slate-500">{s.rosterPosition}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Browse and search the free-agent pool for one position before swapping
+ * someone in - replaces silently auto-picking whoever has the single
+ * highest rating with actually letting you see the options and choose,
+ * the same way you'd shop free agents in any real fantasy app.
+ */
+function PlayerSearchModal({
+  position,
+  candidates,
+  onPick,
+  onClose,
+}: {
+  position: string;
+  candidates: RatedPlayer[];
+  onPick: (playerId: string) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const filtered = candidates
+    .filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
+    .sort((a, b) => (b.rating?.overall ?? 0) - (a.rating?.overall ?? 0));
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-md rounded-2xl border border-surface-border bg-surface-card p-5 shadow-raised"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white">Find a {position}</h2>
+          <button onClick={onClose} className="text-slate-500 transition-colors hover:text-slate-300" aria-label="Close">
+            ✕
+          </button>
+        </div>
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={`Search available ${position}s by name…`}
+          className="mb-3 w-full rounded-lg border border-surface-border bg-surface-page px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary-500/60"
+        />
+        <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
+          {filtered.length === 0 && (
+            <p className="py-6 text-center text-sm text-slate-500">
+              {query ? `No available ${position}s match "${query}".` : `No available ${position}s left.`}
+            </p>
+          )}
+          {filtered.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onPick(p.id)}
+              className="flex w-full items-center gap-3 rounded-lg border border-surface-border bg-surface-page px-3 py-2 text-left transition-colors hover:border-primary-500/40"
+            >
+              <span
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[10px] font-extrabold text-white/90"
+                style={{ backgroundColor: teamColor(p.realNflTeam) }}
+              >
+                {p.realNflTeam || "—"}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{p.name}</span>
+              <span className="shrink-0 text-xs font-bold tabular-nums text-primary-300">{p.rating?.overall ?? "—"}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -89,6 +192,7 @@ export function RosterPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
   const [showLockConfirm, setShowLockConfirm] = useState(false);
+  const [swapTarget, setSwapTarget] = useState<{ dropPlayerId: string; position: string } | null>(null);
 
   async function load() {
     const teams = await api.myTeams();
@@ -108,18 +212,13 @@ export function RosterPage() {
   const rosteredIds = new Set(roster.map((r) => r.nflPlayerId));
   const ratingById = new Map(allPlayers.map((p) => [p.id, p.rating?.overall ?? null]));
 
-  async function swap(dropPlayerId: string, position: string) {
+  async function performSwap(dropPlayerId: string, addPlayerId: string) {
     if (!teamId) return;
-    const replacement = allPlayers
-      .filter((p) => p.position === position && !rosteredIds.has(p.id))
-      .sort((a, b) => (b.rating?.overall ?? 0) - (a.rating?.overall ?? 0))[0];
-    if (!replacement) {
-      setStatus(`No available ${position} to swap in.`);
-      throw new Error("no replacement available");
-    }
+    const replacement = allPlayers.find((p) => p.id === addPlayerId);
     try {
-      await api.swapPlayer(teamId, dropPlayerId, replacement.id);
-      setStatus(`Swapped in ${replacement.name}.`);
+      await api.swapPlayer(teamId, dropPlayerId, addPlayerId);
+      setStatus(replacement ? `Swapped in ${replacement.name}.` : "Swap complete.");
+      setSwapTarget(null);
       await load();
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : "Swap failed.");
@@ -181,13 +280,12 @@ export function RosterPage() {
                 <BenchSwapControl benchEntry={entry} starters={starters} onSwap={swapLineup} />
               )}
               {!locked && (
-                <LockButton
-                  label="Lock In Pick"
-                  lockedLabel="Locked"
-                  resetAfterMs={1500}
-                  onConfirm={() => swap(entry.nflPlayerId, entry.player!.position)}
-                  className="shrink-0 px-2.5 py-1.5 text-[11px]"
-                />
+                <button
+                  onClick={() => setSwapTarget({ dropPlayerId: entry.nflPlayerId, position: entry.player!.position })}
+                  className="shrink-0 rounded-md border border-surface-border bg-surface-page px-2.5 py-1.5 text-[11px] font-semibold text-primary-400 transition-colors hover:border-primary-500/40"
+                >
+                  Change player
+                </button>
               )}
             </div>
           ) : undefined
@@ -252,6 +350,17 @@ export function RosterPage() {
             <div className="space-y-2">{bench.map(renderCard)}</div>
           </Card>
         </div>
+      )}
+
+      {swapTarget && (
+        <PlayerSearchModal
+          position={swapTarget.position}
+          candidates={allPlayers.filter((p) => p.position === swapTarget.position && !rosteredIds.has(p.id))}
+          onPick={(playerId) => {
+            performSwap(swapTarget.dropPlayerId, playerId).catch(() => {});
+          }}
+          onClose={() => setSwapTarget(null)}
+        />
       )}
 
       {showLockConfirm && (
