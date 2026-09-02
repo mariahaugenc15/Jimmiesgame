@@ -116,6 +116,8 @@ export const api = {
     request<{ id: string; name: string }>("/api/leagues", { method: "POST", body: JSON.stringify({ name, isPrivate }) }),
   joinLeague: (leagueId: string, teamId: string) =>
     request<unknown>(`/api/leagues/${leagueId}/join`, { method: "POST", body: JSON.stringify({ teamId }) }),
+  myLeagues: (teamId: string) =>
+    request<{ id: string; name: string; isPrivate: boolean }[]>(`/api/leagues/mine?teamId=${teamId}`),
   standings: (leagueId: string) =>
     request<{ teamId: string; teamName: string; wins: number; losses: number; ties: number }[]>(
       `/api/leagues/${leagueId}/standings`,

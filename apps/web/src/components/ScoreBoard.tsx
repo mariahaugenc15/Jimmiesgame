@@ -2,8 +2,9 @@ import type { ClockState } from "@lockedin/shared";
 import { TeamIconBadge } from "./TeamIconBadge";
 
 interface ScoreBoardProps {
-  homeName: string;
-  awayName: string;
+  /** null while the real team name is still loading - renders a skeleton instead of a placeholder word. */
+  homeName: string | null;
+  awayName: string | null;
   homeIcon?: string | null;
   awayIcon?: string | null;
   homeScore: number;
@@ -39,7 +40,7 @@ function TeamSide({
   hasBall,
   align,
 }: {
-  name: string;
+  name: string | null;
   icon?: string | null;
   score: number;
   accent: "primary" | "danger";
@@ -53,7 +54,7 @@ function TeamSide({
       <div>
         <p className={`flex items-center gap-1.5 text-xs uppercase tracking-wide ${color} ${align === "right" ? "flex-row-reverse justify-end" : ""}`}>
           {hasBall && <BallIcon className={color} />}
-          {name}
+          {name ?? <span className="inline-block h-3 w-16 animate-pulse rounded bg-surface-border align-middle" aria-hidden />}
         </p>
         <p className="text-2xl font-bold text-white">{score}</p>
       </div>

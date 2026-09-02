@@ -3,20 +3,85 @@ import { api, ApiError } from "../lib/api";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { LeaguesIcon } from "../components/navIcons";
-import { buttonPrimary, buttonSecondary } from "../lib/ui";
+import { buttonPrimary, buttonSecondary, buttonTertiary } from "../lib/ui";
+
+interface LeagueRow {
+  id: string;
+  name: string;
+  isPrivate: boolean;
+}
+
+interface StandingRow {
+  teamName: string;
+  wins: number;
+  losses: number;
+  ties: number;
+}
+
+/** Gold/silver/bronze by rank, drawn as a plain colored badge (not an emoji medal) so it matches the rest of the app's custom-styled icon system. */
+function RankBadge({ rank }: { rank: number }) {
+  const style =
+    rank === 1
+      ? "border-[#facc15]/50 bg-[#facc15]/15 text-[#facc15]"
+      : rank === 2
+        ? "border-slate-300/50 bg-slate-300/15 text-slate-300"
+        : rank === 3
+          ? "border-[#d08a4f]/50 bg-[#d08a4f]/15 text-[#d08a4f]"
+          : "border-surface-border bg-surface-page text-slate-500";
+  return (
+    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${style}`}>
+      {rank}
+    </span>
+  );
+}
+
+/** A league's id is how you invite people to it - a copy button beats asking someone to select-and-copy a raw UUID out of a status line. */
+function CopyIdButton({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(id);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // clipboard access can be denied - the ID is still visible to select/copy by hand.
+        }
+      }}
+      className={`${buttonTertiary} border border-surface-border`}
+    >
+      {copied ? "Copied!" : "Copy invite ID"}
+    </button>
+  );
+}
 
 export function LeaguesPage() {
-  const [leagueName, setLeagueName] = useState("My League");
-  const [leagueId, setLeagueId] = useState("");
   const [teamId, setTeamId] = useState<string | null>(null);
-  const [standings, setStandings] = useState<{ teamName: string; wins: number; losses: number; ties: number }[]>([]);
+  const [leagueName, setLeagueName] = useState("My League");
+  const [joinInput, setJoinInput] = useState("");
+  const [myLeagues, setMyLeagues] = useState<LeagueRow[]>([]);
+  const [selectedLeague, setSelectedLeague] = useState<LeagueRow | null>(null);
+  const [standings, setStandings] = useState<StandingRow[]>([]);
   const [leaderboard, setLeaderboard] = useState<{ username: string; skillRating: number }[]>([]);
   const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function loadMyLeagues(tid: string) {
+    const rows = await api.myLeagues(tid);
+    setMyLeagues(rows);
+    return rows;
+  }
 
   useEffect(() => {
     api
       .myTeams()
-      .then((teams) => setTeamId(teams.find((t) => !t.name.startsWith("Bot Squad"))?.id ?? null))
+      .then(async (teams) => {
+        const mine = teams.find((t) => !t.name.startsWith("Bot Squad"));
+        if (!mine) return;
+        setTeamId(mine.id);
+        await loadMyLeagues(mine.id);
+      })
       .catch(() => {});
     api
       .globalLeaderboard()
@@ -24,29 +89,48 @@ export function LeaguesPage() {
       .catch(() => {});
   }, []);
 
+  async function viewStandings(league: LeagueRow) {
+    setSelectedLeague(league);
+    try {
+      const rows = await api.standings(league.id);
+      setStandings(rows);
+    } catch (err) {
+      setStatus(err instanceof ApiError ? err.message : "Couldn't load standings.");
+    }
+  }
+
   async function createLeague() {
+    if (!teamId) return;
+    setBusy(true);
     try {
       const league = await api.createLeague(leagueName, true);
-      setLeagueId(league.id);
-      setStatus(`Created league. ID: ${league.id}`);
+      await api.joinLeague(league.id, teamId);
+      await loadMyLeagues(teamId);
+      setStatus(`Created "${league.name}" and joined it with your team.`);
+      setLeagueName("My League");
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : "Failed to create league.");
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function joinAndLoad() {
-    if (!teamId || !leagueId) return;
+  async function joinByInput() {
+    if (!teamId || !joinInput.trim()) return;
+    setBusy(true);
     try {
-      await api.joinLeague(leagueId, teamId);
-      const rows = await api.standings(leagueId);
-      setStandings(rows);
-      setStatus("Joined league.");
+      await api.joinLeague(joinInput.trim(), teamId);
+      const rows = await loadMyLeagues(teamId);
+      const joined = rows.find((r) => r.id === joinInput.trim());
+      setJoinInput("");
+      setStatus(joined ? `Joined "${joined.name}".` : "Joined league.");
+      if (joined) await viewStandings(joined);
     } catch (err) {
       setStatus(err instanceof ApiError ? err.message : "Failed to join league.");
+    } finally {
+      setBusy(false);
     }
   }
-
-  const medal = ["🥇", "🥈", "🥉"];
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-4 pb-24 sm:p-6">
@@ -68,15 +152,72 @@ export function LeaguesPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {myLeagues.length > 0 && (
+            <Card elevated className="p-5">
+              <SectionHeader title="Your leagues" subtitle="Leagues your team is already in." />
+              <div className="space-y-2">
+                {myLeagues.map((league) => (
+                  <div
+                    key={league.id}
+                    className={`rounded-lg border px-3 py-2.5 transition-colors ${
+                      selectedLeague?.id === league.id
+                        ? "border-primary-500/50 bg-primary-500/5"
+                        : "border-surface-border bg-surface-page"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-slate-100">{league.name}</p>
+                      <div className="flex items-center gap-2">
+                        <CopyIdButton id={league.id} />
+                        <button onClick={() => viewStandings(league)} className={buttonSecondary}>
+                          View standings
+                        </button>
+                      </div>
+                    </div>
+
+                    {selectedLeague?.id === league.id && (
+                      <div className="mt-3 border-t border-surface-border pt-3">
+                        {standings.length === 0 ? (
+                          <p className="text-sm text-slate-500">No completed matches in this league yet.</p>
+                        ) : (
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-xs uppercase tracking-wide text-slate-500">
+                                <th className="pb-2 text-left font-semibold">Team</th>
+                                <th className="pb-2 font-semibold text-primary-400">W</th>
+                                <th className="pb-2 font-semibold text-danger-400">L</th>
+                                <th className="pb-2 font-semibold text-slate-400">T</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-surface-border">
+                              {standings.map((row) => (
+                                <tr key={row.teamName}>
+                                  <td className="py-2 font-medium text-slate-200">{row.teamName}</td>
+                                  <td className="py-2 text-center font-bold text-primary-300">{row.wins}</td>
+                                  <td className="py-2 text-center font-bold text-danger-300">{row.losses}</td>
+                                  <td className="py-2 text-center text-slate-400">{row.ties}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <Card elevated className="p-6">
-            <SectionHeader title="Create a private league" subtitle="Invite friends with the league ID once it's created." />
+            <SectionHeader title="Create a private league" subtitle="You're auto-joined, then share the invite ID with friends." />
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 value={leagueName}
                 onChange={(e) => setLeagueName(e.target.value)}
                 className="flex-1 rounded-lg border border-surface-border bg-surface-page px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary-500/60"
               />
-              <button onClick={createLeague} className={buttonPrimary}>
+              <button onClick={createLeague} disabled={busy || !teamId} className={buttonPrimary}>
                 Create league
               </button>
             </div>
@@ -86,40 +227,15 @@ export function LeaguesPage() {
             <SectionHeader title="Join a league" subtitle="Paste a league ID a friend shared with you." />
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
-                value={leagueId}
-                onChange={(e) => setLeagueId(e.target.value)}
+                value={joinInput}
+                onChange={(e) => setJoinInput(e.target.value)}
                 placeholder="League ID"
                 className="flex-1 rounded-lg border border-surface-border bg-surface-page px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary-500/60"
               />
-              <button onClick={joinAndLoad} className={buttonSecondary}>
+              <button onClick={joinByInput} disabled={busy || !teamId} className={buttonSecondary}>
                 Join &amp; view standings
               </button>
             </div>
-
-            {standings.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">Join a league to see its standings here.</p>
-            ) : (
-              <table className="mt-4 w-full text-sm">
-                <thead>
-                  <tr className="text-xs uppercase tracking-wide text-slate-500">
-                    <th className="pb-2 text-left font-semibold">Team</th>
-                    <th className="pb-2 font-semibold text-primary-400">W</th>
-                    <th className="pb-2 font-semibold text-danger-400">L</th>
-                    <th className="pb-2 font-semibold text-slate-400">T</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-border">
-                  {standings.map((row) => (
-                    <tr key={row.teamName}>
-                      <td className="py-2 font-medium text-slate-200">{row.teamName}</td>
-                      <td className="py-2 text-center font-bold text-primary-300">{row.wins}</td>
-                      <td className="py-2 text-center font-bold text-danger-300">{row.losses}</td>
-                      <td className="py-2 text-center text-slate-400">{row.ties}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
           </Card>
         </div>
 
@@ -137,7 +253,7 @@ export function LeaguesPage() {
                   }`}
                 >
                   <span className="flex min-w-0 items-center gap-2 text-slate-200">
-                    <span className="w-5 shrink-0 text-center text-xs font-bold text-slate-500">{medal[i] ?? i + 1}</span>
+                    <RankBadge rank={i + 1} />
                     <span className="truncate">{row.username}</span>
                   </span>
                   <span className="shrink-0 font-bold tabular-nums text-data-300">{row.skillRating}</span>

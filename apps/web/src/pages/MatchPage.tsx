@@ -27,7 +27,10 @@ export function MatchPage() {
   const [selectedOffense, setSelectedOffense] = useState<OffensivePlay | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [waitingForResolution, setWaitingForResolution] = useState(false);
-  const [teamNames, setTeamNames] = useState<{ home: string; away: string }>({ home: "Home", away: "Away" });
+  // null until the real names load - ScoreBoard/the drive log render a
+  // loading skeleton rather than a placeholder like "Home"/"Away" in the
+  // meantime, so nothing that looks like real data is ever actually a stand-in.
+  const [teamNames, setTeamNames] = useState<{ home: string; away: string } | null>(null);
   const [teamIcons, setTeamIcons] = useState<{ home: string | null; away: string | null }>({ home: null, away: null });
   const [playerById, setPlayerById] = useState<Map<string, InsightPlayer>>(new Map());
   const [myRoster, setMyRoster] = useState<InsightPlayer[]>([]);
@@ -163,8 +166,8 @@ export function MatchPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 pb-24 sm:p-6">
       <ScoreBoard
-        homeName={teamNames.home}
-        awayName={teamNames.away}
+        homeName={teamNames?.home ?? null}
+        awayName={teamNames?.away ?? null}
         homeIcon={teamIcons.home}
         awayIcon={teamIcons.away}
         homeScore={state.homeScore}
@@ -238,11 +241,19 @@ export function MatchPage() {
             ref={logRef}
             className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-surface-border bg-surface-card p-3 text-xs text-slate-400 lg:max-h-[28rem]"
           >
-            {state.log.map((line, i) => (
-              <p key={i}>
-                {line.split(state.homeTeamId).join(teamNames.home).split(state.awayTeamId).join(teamNames.away)}
-              </p>
-            ))}
+            {teamNames ? (
+              state.log.map((line, i) => (
+                <p key={i}>
+                  {line.split(state.homeTeamId).join(teamNames.home).split(state.awayTeamId).join(teamNames.away)}
+                </p>
+              ))
+            ) : (
+              <div className="space-y-1.5" aria-hidden>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-3 animate-pulse rounded bg-surface-border" style={{ width: `${70 - i * 12}%` }} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

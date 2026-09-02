@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db/client.js";
 import { leagueMembers, leagues, matches, teams } from "../db/schema.js";
@@ -21,6 +21,21 @@ leaguesRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
     .values({ name: parsed.data.name, ownerId: req.auth!.userId, isPrivate: parsed.data.isPrivate })
     .returning();
   res.status(201).json(league);
+});
+
+/** The leagues a team already belongs to, so the page can list them directly instead of asking the user to keep track of and re-paste a league ID to see standings again. */
+leaguesRouter.get("/mine", requireAuth, async (req: AuthedRequest, res) => {
+  const teamId = req.query.teamId;
+  if (typeof teamId !== "string") return res.status(400).json({ error: "teamId query param required." });
+  const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
+  if (!team || team.ownerId !== req.auth!.userId) return res.status(404).json({ error: "Team not found." });
+
+  const memberships = await db.query.leagueMembers.findMany({ where: eq(leagueMembers.teamId, teamId) });
+  const leagueIds = memberships.map((m) => m.leagueId);
+  if (leagueIds.length === 0) return res.json([]);
+
+  const rows = await db.query.leagues.findMany({ where: inArray(leagues.id, leagueIds) });
+  res.json(rows.map((l) => ({ id: l.id, name: l.name, isPrivate: l.isPrivate })));
 });
 
 const joinLeagueSchema = z.object({ teamId: z.string().uuid() });

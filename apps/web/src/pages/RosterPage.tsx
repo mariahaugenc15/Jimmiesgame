@@ -169,7 +169,7 @@ export function RosterPage() {
     return (
       <PlayerCard
         key={entry.draftRound}
-        name={entry.player?.name ?? "Unknown"}
+        name={entry.player?.name ?? "Player data unavailable"}
         position={entry.player?.position ?? "—"}
         slot={entry.rosterPosition}
         team={entry.player?.realNflTeam ?? ""}

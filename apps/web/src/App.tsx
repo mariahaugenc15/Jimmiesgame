@@ -9,6 +9,7 @@ import { RosterPage } from "./pages/RosterPage";
 import { MatchPage } from "./pages/MatchPage";
 import { LeaguesPage } from "./pages/LeaguesPage";
 import { BrandTestPage } from "./pages/BrandTestPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { LockedInLogo } from "./components/LockedInLogo";
 import { RouteBackdrop } from "./components/playdiagram/RouteBackdrop";
 
@@ -35,7 +36,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/brand" element={<BrandTestPage />} />
+        {/* Component/style reference page for development only - not reachable in the production build. */}
+        {import.meta.env.DEV && <Route path="/brand" element={<BrandTestPage />} />}
         <Route
           path="/"
           element={
@@ -68,6 +70,7 @@ export default function App() {
             </RequireAuth>
           }
         />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <MobileTabBar />
     </div>
