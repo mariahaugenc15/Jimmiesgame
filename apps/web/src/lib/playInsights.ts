@@ -86,19 +86,23 @@ export function defensePlayHint(play: DefensivePlay, insight: DefenseUnitInsight
   return `Leans on your ${attr.label} (${insight[attr.key]})`;
 }
 
-/** Post-snap "why" line for the play-diagram, grounded in the actual featured player and outcome. */
+/**
+ * Post-snap "why" line for the play-diagram, grounded in the actual
+ * featured player and outcome. Names them plainly (first initial + last
+ * name) - no rating number tacked on next to the name here; that context
+ * lives in the pre-snap hint instead, where it's clearly labeled as a
+ * stat rather than mixed into the play-by-play sentence.
+ */
 export function explainOutcome(result: PlayResult, player: InsightPlayer | null): string {
   const name = player ? shortenName(player.name) : null;
-  const attr = offenseAttributeFor(result.offensivePlay);
-  const ratingNote = player?.rating ? ` (${player.rating[attr.key]} ${attr.label})` : "";
 
   switch (result.type) {
     case "touchdown":
-      return name ? `${name}${ratingNote} broke free for the score.` : "Broke free for the score.";
+      return name ? `${name} broke free for the score.` : "Broke free for the score.";
     case "gain":
-      return name ? `${name}${ratingNote} came through for the gain.` : "Positive gain.";
+      return name ? `${name} came through for the gain.` : "Positive gain.";
     case "incomplete":
-      return name ? `Pass to ${name}${ratingNote} fell incomplete.` : "Pass fell incomplete.";
+      return name ? `Pass to ${name} fell incomplete.` : "Pass fell incomplete.";
     case "interception":
       return name ? `${name} was covered well — picked off.` : "Picked off.";
     case "sack":

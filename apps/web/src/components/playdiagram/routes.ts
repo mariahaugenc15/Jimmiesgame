@@ -7,6 +7,15 @@ export const FIELD_H = 180;
 export const LOS_X = 44;
 const MID_Y = FIELD_H / 2;
 
+/** Yards downfield of the snap that fill the diagram's full width - the same scale routePath/routeEndPoint use to place a play's end point, exposed so the field's yard-line gridlines line up with it exactly. */
+export const MAX_PLAY_YARDS = 35;
+
+/** Maps yards downfield of the snap to an x coordinate, using the same LOS_X-to-edge scale as routePath/routeEndPoint. */
+export function yardsToX(yards: number): number {
+  const reach = Math.max(0, Math.min(1, yards / MAX_PLAY_YARDS));
+  return LOS_X + reach * (FIELD_W - LOS_X - 24);
+}
+
 /**
  * A small, reusable set of route-line shapes (one per offensive play call),
  * generated as a function of how far downfield the play actually went -
@@ -45,7 +54,7 @@ export const DEFENDER_SPOTS: [number, number][] = [
 
 /** Roughly maps real yards gained onto a 0..1 fraction of the diagram's width, for visual pacing only. */
 export function depthFractionForYards(yards: number): number {
-  return Math.max(0.08, Math.min(1, yards / 35));
+  return Math.max(0.08, Math.min(1, yards / MAX_PLAY_YARDS));
 }
 
 /** Where routePath's line actually ends, for placing a name label at the doodle figure's resting spot. */

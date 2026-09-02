@@ -161,7 +161,7 @@ export function MatchPage() {
         : null;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-4 pb-24 sm:p-6">
+    <div className="mx-auto max-w-6xl space-y-4 p-4 pb-24 sm:p-6">
       <ScoreBoard
         homeName={teamNames.home}
         awayName={teamNames.away}
@@ -177,62 +177,74 @@ export function MatchPage() {
 
       {state.phase !== "final" && <HowToPlay />}
 
-      {/* The play theater is the single largest element on the screen - a
-          continuous field that goes from pre-snap waiting to animated
-          route/ball-carrier development to outcome, not two separate
-          panels. Remounted per resolved play so its animation replays. */}
-      <PlayTheater
-        key={state.log.length}
-        down={state.down}
-        lastPlay={state.lastPlay}
-        selectedOffensivePlay={selectedOffense}
-        player={featuredPlayer}
-        offenseIcon={offenseIcon}
-      />
-
-      {state.lastPlay && (
-        <div className="space-y-2 rounded-lg border border-surface-border bg-surface-card p-3">
-          <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} />
-          {state.lastPlay.breakawayChance > 0 && (
-            <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
-          )}
-        </div>
-      )}
-
       {error && (
         <p className="rounded-md border border-danger-500/30 bg-danger-500/10 p-3 text-sm text-danger-300">{error}</p>
       )}
 
-      {state.phase === "final" ? (
-        <div className="rounded-xl border border-primary-500/30 bg-surface-raised p-6 text-center shadow-raised">
-          <p className="text-lg font-bold text-primary-400">Final score</p>
-          <p className="mt-1 text-2xl font-extrabold text-white">
-            {state.homeScore} – {state.awayScore}
-          </p>
+      {/* Side by side on wider screens so the field and the play-calling
+          controls are both visible at once, without scrolling between
+          watching the play and calling the next one. Stacks on mobile,
+          where there's no room for two columns anyway. */}
+      <div className="grid gap-4 lg:grid-cols-5 lg:items-start">
+        <div className="space-y-4 lg:col-span-3">
+          {/* The play theater is the single largest element on the screen - a
+              continuous field that goes from pre-snap waiting to animated
+              route/ball-carrier development to outcome, not two separate
+              panels. Remounted per resolved play so its animation replays. */}
+          <PlayTheater
+            key={state.log.length}
+            down={state.down}
+            lastPlay={state.lastPlay}
+            selectedOffensivePlay={selectedOffense}
+            player={featuredPlayer}
+            offenseIcon={offenseIcon}
+          />
+
+          {state.lastPlay && (
+            <div className="space-y-2 rounded-lg border border-surface-border bg-surface-card p-3">
+              <ProbabilityBar label="Success probability" value={state.lastPlay.successProbability} />
+              {state.lastPlay.breakawayChance > 0 && (
+                <ProbabilityBar label="Breakaway chance" value={state.lastPlay.breakawayChance} color="#f97316" />
+              )}
+            </div>
+          )}
+
+          <FieldPositionTracker down={state.down} />
         </div>
-      ) : (
-        <PlayCallPanel
-          mode={mode}
-          disabled={waitingForResolution}
-          roster={myRoster}
-          opponentRoster={opponentRoster}
-          onSelectOffense={(play) => {
-            setSelectedOffense(play);
-            submitPlay(play);
-          }}
-          onSelectDefense={submitPlay}
-        />
-      )}
 
-      <FieldPositionTracker down={state.down} />
+        <div className="space-y-4 lg:col-span-2">
+          {state.phase === "final" ? (
+            <div className="rounded-xl border border-primary-500/30 bg-surface-raised p-6 text-center shadow-raised">
+              <p className="text-lg font-bold text-primary-400">Final score</p>
+              <p className="mt-1 text-2xl font-extrabold text-white">
+                {state.homeScore} – {state.awayScore}
+              </p>
+            </div>
+          ) : (
+            <PlayCallPanel
+              mode={mode}
+              disabled={waitingForResolution}
+              roster={myRoster}
+              opponentRoster={opponentRoster}
+              onSelectOffense={(play) => {
+                setSelectedOffense(play);
+                submitPlay(play);
+              }}
+              onSelectDefense={submitPlay}
+            />
+          )}
 
-      <div
-        ref={logRef}
-        className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-surface-border bg-surface-card p-3 text-xs text-slate-400"
-      >
-        {state.log.map((line, i) => (
-          <p key={i}>{line.split(state.homeTeamId).join(teamNames.home).split(state.awayTeamId).join(teamNames.away)}</p>
-        ))}
+          <div
+            ref={logRef}
+            className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-surface-border bg-surface-card p-3 text-xs text-slate-400 lg:max-h-[28rem]"
+          >
+            {state.log.map((line, i) => (
+              <p key={i}>
+                {line.split(state.homeTeamId).join(teamNames.home).split(state.awayTeamId).join(teamNames.away)}
+              </p>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
